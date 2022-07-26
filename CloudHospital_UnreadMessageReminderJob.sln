@@ -1,0 +1,25 @@
+﻿
+Microsoft Visual Studio Solution File, Format Version 12.00
+# Visual Studio Version 16
+VisualStudioVersion = 25.0.1703.0
+MinimumVisualStudioVersion = 10.0.40219.1
+Project("{FAE04EC0-301F-11D3-BF4B-00C04F79EFBC}") = "CloudHospital_UnreadMessageReminderJob", "CloudHospital_UnreadMessageReminderJob.csproj", "{EE7C1B44-6A6C-4C91-BF50-A59747CE469F}"
+EndProject
+Global
+	GlobalSection(SolutionConfigurationPlatforms) = preSolution
+		Debug|Any CPU = Debug|Any CPU
+		Release|Any CPU = Release|Any CPU
+	EndGlobalSection
+	GlobalSection(ProjectConfigurationPlatforms) = postSolution
+		{EE7C1B44-6A6C-4C91-BF50-A59747CE469F}.Debug|Any CPU.ActiveCfg = Debug|Any CPU
+		{EE7C1B44-6A6C-4C91-BF50-A59747CE469F}.Debug|Any CPU.Build.0 = Debug|Any CPU
+		{EE7C1B44-6A6C-4C91-BF50-A59747CE469F}.Release|Any CPU.ActiveCfg = Release|Any CPU
+		{EE7C1B44-6A6C-4C91-BF50-A59747CE469F}.Release|Any CPU.Build.0 = Release|Any CPU
+	EndGlobalSection
+	GlobalSection(SolutionProperties) = preSolution
+		HideSolutionNode = FALSE
+	EndGlobalSection
+	GlobalSection(ExtensibilityGlobals) = postSolution
+		SolutionGuid = {D2DE7FCA-91E2-4D66-B580-E88295862568}
+	EndGlobalSection
+EndGlobal
