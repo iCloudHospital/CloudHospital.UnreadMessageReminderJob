@@ -30,7 +30,10 @@ public class GroupChannelMessageSendWebHook
     {
         _logger.LogInformation("⚡️ HTTP trigger function processed a request.");
 
-        EventModel model = null;
+        // SendBirdGroupChannelMessageSendEventModel.Sender 에 따라 처리할 내용이 다릅니다.
+
+
+        SendBirdGroupChannelMessageSendEventModel model = null;
 
         var response = CreateResponse(req, HttpStatusCode.OK);
 
@@ -50,7 +53,7 @@ public class GroupChannelMessageSendWebHook
 
         try
         {
-            model = JsonSerializer.Deserialize<EventModel>(payload, _jsonSerializerOptions);
+            model = JsonSerializer.Deserialize<SendBirdGroupChannelMessageSendEventModel>(payload, _jsonSerializerOptions);
         }
         catch
         {
@@ -71,11 +74,11 @@ public class GroupChannelMessageSendWebHook
 
         var entry = new EventTableModel
         {
-            PartitionKey = model.GroupId.ToString(),
+            PartitionKey = model.Channel.ChannelUrl,
             RowKey = Guid.NewGuid().ToString(),
             Message = "Hello world from Table!!",
             Json = payload,
-            Created = model.Created,
+            Created = model.Payload.CreatedAt,
         };
 
         var storageAccountConnectionString = Environment.GetEnvironmentVariable(Constants.AZURE_STORAGE_ACCOUNT_CONNECTION);
@@ -83,19 +86,19 @@ public class GroupChannelMessageSendWebHook
         var tableClient = new TableClient(storageAccountConnectionString, Constants.TABLE_NAME);
         await tableClient.CreateIfNotExistsAsync();
 
-        var queryResult = tableClient.QueryAsync<EventTableModel>(filter: $"{nameof(EventTableModel.PartitionKey)} eq '{model.GroupId}'").AsPages();
+        var queryResult = tableClient.QueryAsync<EventTableModel>(filter: $"{nameof(EventTableModel.PartitionKey)} eq '{model.Channel.ChannelUrl}'").AsPages();
 
         await foreach (var result in queryResult)
         {
             foreach (var item in result.Values)
             {
                 await tableClient.DeleteEntityAsync(item.PartitionKey, item.RowKey);
-                _logger.LogInformation($"Remove old data. {nameof(EventModel.GroupId)}={model.GroupId}");
+                _logger.LogInformation($"Remove old data. {nameof(EventModel.GroupId)}={model.Channel.ChannelUrl}");
             }
         }
 
         await tableClient.AddEntityAsync(entry);
-        _logger.LogInformation($"Add event data to Table. {nameof(EventModel.GroupId)}={model.GroupId}");
+        _logger.LogInformation($"Add event data to Table. {nameof(EventModel.GroupId)}={model.Channel.ChannelUrl}");
 
         await Task.Delay(TimeSpan.FromMilliseconds(100));
 
