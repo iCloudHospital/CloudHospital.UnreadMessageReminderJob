@@ -1,3 +1,5 @@
+using System.Text.Json.Serialization;
+
 namespace CloudHospital.UnreadMessageReminderJob.Models;
 
 public class EventModel
@@ -10,3 +12,4 @@ public class EventModel
 
     public DateTimeOffset Created { get; set; } = DateTimeOffset.UtcNow;
 }
+
