@@ -2,10 +2,14 @@ using System.Text.Json.Serialization;
 
 namespace CloudHospital.UnreadMessageReminderJob.Models;
 
-public class SendBirdGroupChannelMessageSendEventModel
+/// <summary>
+/// Web hook payload of group_channel:message_send
+/// <para>
+/// https://sendbird.com/docs/chat/v3/platform-api/webhook/events/group-channel#2-group_channel-message_send
+/// </para>
+/// </summary>
+public class SendBirdGroupChannelMessageSendEventModel : SendBirdGroupChannelEventModelBase
 {
-    public string Category { get; set; }
-
     public SendBirdUserModel Sender { get; set; }
 
     public bool Silent { get; set; }
@@ -22,18 +26,25 @@ public class SendBirdGroupChannelMessageSendEventModel
 
     public IEnumerable<SendBirdChannelMemberModel> Members { get; set; } = Enumerable.Empty<SendBirdChannelMemberModel>();
 
-    public string Type { get; set; }
+    /// <summary>
+    /// One of [MESG, FILE, ADMM]
+    /// <para>
+    /// <see cref="SendBirdGroupChannelMessageSendEventTypes" />
+    /// </para>
+    /// </summary>
+    public string Type { get; set; } = string.Empty;
 
-    public SendBirdGroupChannelMessageSendPayloadModel Payload { get; set; }
+    public SendBirdGroupChannelMessagePayloadModel Payload { get; set; }
 
     public SendBirdGroupChannelModel Channel { get; set; }
 
     /// <summary>
-    /// iOS, Android, JavaScript, .NET, API
+    /// One of [iOS, Android, JavaScript, .NET, API]
+    /// <para>
+    /// <see cref="SendBirdGroupChannelMessageSendEventSdks" />
+    /// </para>
     /// </summary>
-    public string Sdk { get; set; }
-    [JsonPropertyName("app_id")]
-    public string AppId { get; set; }
+    public string Sdk { get; set; } = string.Empty;
 }
 
 public class SendBirdUserModel
@@ -58,9 +69,12 @@ public class SendBirdChannelMemberModel : SendBirdUserModel
     public int IsHidden { get; set; }
 
     /// <summary>
-    /// joined, invited
+    /// One of [joined, invited]
+    /// <para>
+    /// <see cref="SendBirdChannelMemberStates" />
+    /// </para>
     /// </summary>
-    public string State { get; set; }
+    public string State { get; set; } = string.Empty;
     [JsonPropertyName("is_blocking_sender")]
     public bool IsBlockingSender { get; set; }
     [JsonPropertyName("is_blocked_by_sender")]
@@ -82,20 +96,30 @@ public class SendBirdChannelMemberModel : SendBirdUserModel
 
 }
 
-public class SendBirdGroupChannelMessageSendPayloadModel
+public class SendBirdGroupChannelMessagePayloadModel
 {
     [JsonPropertyName("message_id")]
     public long MessageId { get; set; }
     [JsonPropertyName("custom_type")]
     public string CustomType { get; set; }
-    public string Message { get; set; }
+    // Text message
+    public string? Message { get; set; }
+    public IDictionary<string, string>? Translations { get; set; } = new Dictionary<string, string>();
+    // Text message
 
-    public IDictionary<string, string> Translations { get; set; } = new Dictionary<string, string>();
+    // File message
+    public string? Filename { get; set; }
+    [JsonPropertyName("content_type")]
+    public string? ContentType { get; set; }
+    public string? Url { get; set; }
+    [JsonPropertyName("content_size")]
+    public long? ContentSize { get; set; }
+    // File message
 
     [JsonPropertyName("created_at")]
-    public DateTime CreatedAt { get; set; }
+    public DateTimeOffset CreatedAt { get; set; }
 
-    public string Data { get; set; }
+    public string? Data { get; set; }
 }
 
 public class SendBirdGroupChannelModel
@@ -118,7 +142,75 @@ public class SendBirdGroupChannelModel
     public string Data { get; set; }
 }
 
+// TODO: Verify fields
 public class MetadataModel
 {
     public string Unknown { get; set; }
+}
+
+/// <summary>
+/// Group channel message types
+/// </summary>
+public class SendBirdGroupChannelMessageSendEventTypes
+{
+    /// <summary>
+    /// Text message
+    /// </summary>
+    public const string TextMessage = "MESG";
+    /// <summary>
+    /// File message
+    /// </summary>
+    public const string FileMessage = "FILE";
+    /// <summary>
+    /// Admin message
+    /// </summary>
+    public const string AdminMessage = "ADMM";
+}
+
+// iOS, Android, JavaScript, .NET, API
+public class SendBirdGroupChannelMessageSendEventSdks
+{
+    public const string iOS = "iOS";
+    public const string Android = "Andoird";
+    public const string JavaScript = "JavaScript";
+    public const string DotNet = ".NET";
+    public const string Api = "API";
+}
+
+public class SendBirdChannelMemberStates
+{
+
+    public const string Joined = "joined";
+    public const string Invited = "invited";
+}
+
+
+
+public class SendBirdGroupChannelReadUpdateModel
+{
+    [JsonPropertyName("user_id")]
+    public string UserId { get; set; } = string.Empty;
+    [JsonPropertyName("read_ts")]
+    public DateTimeOffset ReadAt { get; set; }
+    [JsonPropertyName("channel_unread_message_count")]
+    public int ChannelUnreadMessageCount { get; set; } = 0;
+    [JsonPropertyName("total_unread_message_count")]
+    public int TotalUnreadMessageCount { get; set; } = 0;
+}
+
+public class SendBirdGroupChannelEventCategories
+{
+    public const string MessageSend = "group_channel:message_send";
+    public const string MessageRead = "group_channel:message_read";
+}
+
+public abstract class SendBirdGroupChannelEventModelBase
+{
+    /// <summary>
+    /// <see cref="SendBirdGroupChannelEventCategories" />
+    /// </summary>
+    public string Category { get; set; } = string.Empty;
+
+    [JsonPropertyName("app_id")]
+    public string AppId { get; set; } = string.Empty;
 }
