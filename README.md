@@ -11,6 +11,7 @@ Insert wrapped event data from HTTP request body into table storage.
 HTTP 요청 본문을 테이블 스토리지에 입력합니다.
 
 POST: /api/GroupChannelMessageSendWebHook
+
 payload: [group_channel:message_send event](https://sendbird.com/docs/chat/v3/platform-api/webhook/events/group-channel#2-group_channel-message_send)
 
 Removes queued entries in table storage with the channel.channel_url value in the HTTP request body.
@@ -18,6 +19,7 @@ Removes queued entries in table storage with the channel.channel_url value in th
 HTTP 요청 본문의 channel.channel_url 값으로 테이블 스토리지에 대기중인 항목을 제거합니다.
 
 POST: /api/GroupChannelMessageReadWebHook
+
 payload: [group_channel:message_read event](https://sendbird.com/docs/chat/v3/platform-api/webhook/events/group-channel#2-group_channel-message_read)
 
 
