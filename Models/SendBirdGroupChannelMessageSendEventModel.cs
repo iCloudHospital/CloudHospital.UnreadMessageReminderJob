@@ -1,4 +1,5 @@
 using System.Text.Json.Serialization;
+using CloudHospital.UnreadMessageReminderJob.Converters;
 
 namespace CloudHospital.UnreadMessageReminderJob.Models;
 
@@ -117,7 +118,8 @@ public class SendBirdGroupChannelMessagePayloadModel
     // File message
 
     [JsonPropertyName("created_at")]
-    public DateTimeOffset CreatedAt { get; set; }
+    [JsonConverter(typeof(DateTimeJsonCoonverter))]
+    public DateTime? CreatedAt { get; set; }
 
     public string? Data { get; set; }
 }
@@ -145,7 +147,7 @@ public class SendBirdGroupChannelModel
 // TODO: Verify fields
 public class MetadataModel
 {
-    public string Unknown { get; set; }
+    public string? Unknown { get; set; }
 }
 
 /// <summary>
@@ -191,7 +193,8 @@ public class SendBirdGroupChannelReadUpdateModel
     [JsonPropertyName("user_id")]
     public string UserId { get; set; } = string.Empty;
     [JsonPropertyName("read_ts")]
-    public DateTimeOffset ReadAt { get; set; }
+    [JsonConverter(typeof(DateTimeJsonCoonverter))]
+    public DateTime? ReadAt { get; set; }
     [JsonPropertyName("channel_unread_message_count")]
     public int ChannelUnreadMessageCount { get; set; } = 0;
     [JsonPropertyName("total_unread_message_count")]

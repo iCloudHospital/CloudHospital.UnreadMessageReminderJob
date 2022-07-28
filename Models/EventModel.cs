@@ -10,6 +10,6 @@ public class EventModel
 
     public string Message { get; set; } = string.Empty;
 
-    public DateTimeOffset Created { get; set; } = DateTimeOffset.UtcNow;
+    public DateTime Created { get; set; } = DateTime.UtcNow;
 }
 

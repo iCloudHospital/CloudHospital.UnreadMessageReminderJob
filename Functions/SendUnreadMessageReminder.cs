@@ -23,9 +23,10 @@ namespace CloudHospital.UnreadMessageReminderJob
         {
             _logger.LogInformation($"⚡️ Dequeue item: {nameof(EventModel.GroupId)}={item.GroupId} {nameof(EventModel.Id)}={item.Id}");
 
-            //await Task.Delay(TimeSpan.FromMilliseconds(100));
+            _logger.LogInformation($"🚀 {item.Message} created at {item.Created:HH:mm:ss}. now:{DateTime.UtcNow:HH:mm:ss}");
 
-            _logger.LogInformation($"🚀 {item.Message} created at {item.Created:HH:mm:ss}. now:{DateTimeOffset.UtcNow:HH:mm:ss}");
+            // TODO: 사용자 타입 데이터를 어떤 필드에서 확인할 수 있는지 확인 필요
+            // sender == [ChManager, Manager]
 
             // find user email
             var userId = "001b7d3c-3a9a-4204-bf27-b094aa7c9cef";
@@ -76,7 +77,7 @@ AND A.IsHidden = 0
 
                     var users = connection.Query<User>(query, new { Id = id });
 
-                    if (users != null && users.Count() > 0)
+                    if (users != null && users.Any())
                     {
                         var foundUser = users.FirstOrDefault();
                         if (foundUser != null)
