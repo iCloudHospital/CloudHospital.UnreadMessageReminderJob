@@ -23,7 +23,7 @@ public class TimerJob
     }
 
     [Function("TimerJob")]
-    public async Task<QueueResponse<EventModel>> Run(
+    public async Task<QueueResponse<SendBirdGroupChannelMessageSendEventModel>> Run(
         [TimerTrigger(Constants.TIMER_SCHEDULE)]
         MyInfo myTimer)
     {
@@ -31,7 +31,7 @@ public class TimerJob
         _logger.LogInformation($"⚡️ Timer trigger function executed at: {DateTime.UtcNow:yyyy-MM-ddTHH:mm:ssZ}");
         // _logger.LogInformation($"🔨 Next timer schedule at: {myTimer.ScheduleStatus?.Next}");
 
-        var result = new QueueResponse<EventModel>();
+        var result = new QueueResponse<SendBirdGroupChannelMessageSendEventModel>();
 
         var storageAccountConnectionString = Environment.GetEnvironmentVariable(Constants.AZURE_STORAGE_ACCOUNT_CONNECTION);
 
@@ -55,7 +55,7 @@ public class TimerJob
 
             foreach (var entry in item.Values)
             {
-                var model = JsonSerializer.Deserialize<EventModel>(entry.Json, _jsonSerializerOptions);
+                var model = JsonSerializer.Deserialize<SendBirdGroupChannelMessageSendEventModel>(entry.Json, _jsonSerializerOptions);
                 if (model != null)
                 {
                     // enqueue

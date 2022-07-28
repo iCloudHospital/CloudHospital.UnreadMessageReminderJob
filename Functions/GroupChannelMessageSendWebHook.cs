@@ -45,8 +45,6 @@ public class GroupChannelMessageSendWebHook : HttpTriggerFunctionBase
             reader.Close();
         }
 
-        _logger.LogInformation($"Payload: {payload}");
-
         if (string.IsNullOrWhiteSpace(payload))
         {
             _logger.LogWarning("Payload is empty.");
@@ -101,12 +99,12 @@ public class GroupChannelMessageSendWebHook : HttpTriggerFunctionBase
             foreach (var item in result.Values)
             {
                 await tableClient.DeleteEntityAsync(item.PartitionKey, item.RowKey);
-                _logger.LogInformation($"Remove old data. {nameof(EventModel.GroupId)}={model.Channel.ChannelUrl}");
+                _logger.LogInformation($"Remove old data. {nameof(EventTableModel.PartitionKey)}={model.Channel.ChannelUrl}");
             }
         }
 
         await tableClient.AddEntityAsync(entry);
-        _logger.LogInformation($"Add event data to Table. {nameof(EventModel.GroupId)}={model.Channel.ChannelUrl}");
+        _logger.LogInformation($"Add event data to Table. {nameof(EventTableModel.PartitionKey)}={model.Channel.ChannelUrl}");
 
         return response;
     }
