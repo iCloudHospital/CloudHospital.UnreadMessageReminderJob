@@ -2,6 +2,10 @@ namespace CloudHospital.UnreadMessageReminderJob;
 
 public class Constants
 {
+    public const string ENV_SENDGRID_APIKEY = "SendGridApiKey";
+    public const string ENV_SENDGRID_SENDER_EMAIL = "SendGridSenderEmail";
+    public const string ENV_SENDGRID_SENDER_NAME = "SendGridSenderName";
+
     public const string QUEUE_NAME = "sendbird-messages";
 
     public const string TABLE_NAME = "test";

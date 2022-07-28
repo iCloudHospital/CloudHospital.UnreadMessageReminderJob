@@ -80,7 +80,7 @@ public class GroupChannelMessageReadWebHook : HttpTriggerFunctionBase
             {
                 await tableClient.DeleteEntityAsync(item.PartitionKey, item.RowKey);
 
-                _logger.LogInformation($"Remove old data. {nameof(EventModel.GroupId)}={model.Channel.ChannelUrl}");
+                _logger.LogInformation($"Remove old data. {nameof(EventTableModel.PartitionKey)}={model.Channel.ChannelUrl}");
             }
         }
 
