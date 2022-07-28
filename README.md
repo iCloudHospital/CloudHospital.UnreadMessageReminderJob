@@ -4,11 +4,22 @@
 * Timer Trigger
 * Queue Trigger
 
-### Http trigger
+### Http triggers
 
 Insert wrapped event data from HTTP request body into table storage.
 
 HTTP 요청 본문을 테이블 스토리지에 입력합니다.
+
+POST: /api/GroupChannelMessageSendWebHook
+payload: [group_channel:message_send event](https://sendbird.com/docs/chat/v3/platform-api/webhook/events/group-channel#2-group_channel-message_send)
+
+Removes queued entries in table storage with the channel.channel_url value in the HTTP request body.
+
+HTTP 요청 본문의 channel.channel_url 값으로 테이블 스토리지에 대기중인 항목을 제거합니다.
+
+POST: /api/GroupChannelMessageReadWebHook
+payload: [group_channel:message_read event](https://sendbird.com/docs/chat/v3/platform-api/webhook/events/group-channel#2-group_channel-message_read)
+
 
 ### Timer trigger
 
@@ -28,6 +39,9 @@ Process dequeued event data.
 {
     "AzureWebJobsStorage": "<Azure Storage Account connection string; with queue-endpoint, table-endpoint>",
     "Database": "<Azure SQL Database connection string>",
+    "SendGridApiKey": "<sendgrid api key>",
+    "SendGridSenderEmail": "<sender email address>",
+    "SendGridSenderName": "<sender name>",
     "FUNCTIONS_WORKER_RUNTIME": "dotnet-isolated"
 }
 ```
@@ -38,6 +52,9 @@ $ echo '{
   "Values": {
     "AzureWebJobsStorage": "<Azure Storage Account connection string; with queue-endpoint, table-endpoint>",
     "Database": "<Azure SQL Database connection string>",
+    "SendGridApiKey": "<sendgrid api key>",
+    "SendGridSenderEmail": "<sender email address>",
+    "SendGridSenderName": "<sender name>",
     "FUNCTIONS_WORKER_RUNTIME": "dotnet-isolated"
   }
 }' >> local.settings.json
@@ -100,10 +117,111 @@ POST: http://localhost:7071/api/GroupChannelMessageSendWebHook
 
 ```json
 {
-    "id":"d325e334-2f2f-4d6b-aa69-7a3084408d58",
-    "groupId":"test-channel",
-    "message":"Hello World!! from postman 🚀",
-    "created":"2022-07-26T05:38:00Z"
+    "category": "group_channel:message_send",
+    "sender": {
+        "user_id": "Jeff",
+        "nickname": "Oldies but goodies",
+        "profile_url": "https://sendbird.com/main/img/profiles/profile_38_512px.png",
+        "metadata": {}
+    },
+    "silent": false,
+    "sender_ip_addr": "xxx.xxx.xxx.xx",
+    "custom_type": "",
+    "mention_type": "users",
+    "mentioned_users": [],
+    "members": [
+        {
+            "user_id": "Jeff",
+            "nickname": "Oldies but goodies",
+            "profile_url": "https://sendbird.com/main/img/profiles/profile_38_512px.png",
+            "is_active": true,
+            "is_online": false,
+            "is_hidden": 0,
+            "state": "joined",  
+            "is_blocking_sender": false,
+            "is_blocked_by_sender": false,
+            "unread_message_count": 16,
+            "total_unread_message_count": 16,
+            "channel_unread_message_count": 5,
+            "channel_mention_count": 0,
+            "push_enabled": false,
+            "push_trigger_option": "default",
+            "do_not_disturb": false,
+            "metadata": {}
+        }
+    ],
+    "type": "MESG", 
+    "payload": {
+        "message_id": 238303376,
+        "custom_type": "",
+        "message": "Webhook simulation",
+        "translations": {
+            "en": "",
+            "de": ""
+        },
+        "created_at": 1540798555343,
+        "data": ""
+    },
+    "channel": {
+        "name": "Sendbird engineers talking room",
+        "channel_url": "sendbird_group_channel_47226288_21c0d617e45a7db4e12a7f5efdb4df4743b11c16",
+        "custom_type": "business",
+        "is_distinct": false,
+        "is_public": false,
+        "is_super": false,
+        "is_ephemeral": false,
+        "is_discoverable": false,
+        "data": ""
+    },
+    "sdk": "API",
+    "app_id": "xxxxxxxx-xxxx-xxxx-xxxx-xxxxxxxxxxxx"
 }
 ```
 
+
+POST: http://localhost:7071/api/GroupChannelMessageReadWebHook
+
+```json
+{
+    "category": "group_channel:message_read",
+    "members": [   
+        {
+            "user_id": "John",
+            "nickname": "Sendbirdian",
+            "profile_url": "https://sendbird.com/main/img/profiles/profile_24_512px.png",
+            "is_active": true,
+            "is_online": false,
+            "is_hidden": 0,
+            "state": "joined", 
+            "unread_message_count": 0,
+            "total_unread_message_count": 3,
+            "channel_unread_message_count": 0,
+            "channel_mention_count": 0,
+            "push_enabled": false,
+            "push_trigger_option": "default",
+            "do_not_disturb": false,
+            "metadata": {}
+        }
+    ],
+    "channel": {
+        "name": "Let's make a good company",
+        "channel_url": "sendbird_group_channel_47226288_21c0d617e45a7db4e12a7f5efdb4df4743b11c16",
+        "custom_type": "business",
+        "is_distinct": false,
+        "is_public": false,
+        "is_super": false,
+        "is_ephemeral": false,
+        "is_discoverable": false,
+        "data": ""
+    },
+    "read_updates": [
+        {
+            "user_id": "John",
+            "read_ts": 1540864257418,
+            "channel_unread_message_count": 0,
+            "total_unread_message_count": 3
+        }
+    ],
+    "app_id": "xxxxxxxx-xxxx-xxxx-xxxx-xxxxxxxxxxxx"
+}
+```
