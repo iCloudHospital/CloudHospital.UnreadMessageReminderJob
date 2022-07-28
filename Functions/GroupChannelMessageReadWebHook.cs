@@ -1,6 +1,5 @@
 using System.Net;
 using System.Text.Json;
-using Azure.Data.Tables;
 using CloudHospital.UnreadMessageReminderJob.Models;
 using Microsoft.Azure.Functions.Worker;
 using Microsoft.Azure.Functions.Worker.Http;
@@ -10,15 +9,15 @@ using Microsoft.Extensions.Options;
 namespace CloudHospital.UnreadMessageReminderJob;
 
 /// <summary>
-/// sendbird webhook: group_channel:message_send 
+/// sendbird webhook: group_channel:message_read
 /// </summary>
-public class GroupChannelMessageSendWebHook : HttpTriggerFunctionBase
+public class GroupChannelMessageReadWebHook : HttpTriggerFunctionBase
 {
     private readonly ILogger _logger;
     private readonly JsonSerializerOptions _jsonSerializerOptions;
 
 
-    public GroupChannelMessageSendWebHook(
+    public GroupChannelMessageReadWebHook(
         IOptionsMonitor<JsonSerializerOptions> jsonSerializerOptionsAccessor,
         ILoggerFactory loggerFactory)
     {
@@ -26,12 +25,12 @@ public class GroupChannelMessageSendWebHook : HttpTriggerFunctionBase
         _logger = loggerFactory.CreateLogger<GroupChannelMessageSendWebHook>();
     }
 
-    [Function("GroupChannelMessageSendWebHook")]
+    [Function("GroupChannelMessageReadWebHook")]
     public async Task<HttpResponseData> Run(
         [HttpTrigger(AuthorizationLevel.Function, "post")]
-        HttpRequestData req)
+            HttpRequestData req)
     {
-        _logger.LogInformation($"⚡️ [{nameof(GroupChannelMessageSendWebHook)}] HTTP trigger function processed a request.");
+        _logger.LogInformation($"⚡️ [{nameof(GroupChannelMessageReadWebHook)}] HTTP trigger function processed a request.");
 
         SendBirdGroupChannelMessageSendEventModel model = null;
 
@@ -44,8 +43,6 @@ public class GroupChannelMessageSendWebHook : HttpTriggerFunctionBase
             payload = await reader.ReadToEndAsync();
             reader.Close();
         }
-
-        _logger.LogInformation($"Payload: {payload}");
 
         if (string.IsNullOrWhiteSpace(payload))
         {
@@ -63,34 +60,15 @@ public class GroupChannelMessageSendWebHook : HttpTriggerFunctionBase
             return CreateResponse(req, HttpStatusCode.BadRequest);
         }
 
-
         if (model == null)
         {
             _logger.LogWarning("Payload could not deserialize.");
             return CreateResponse(req, HttpStatusCode.BadRequest);
         }
 
-        // _logger.LogInformation($"Payload #1: {payload}");
-        // _logger.LogInformation($"Payload #2: {JsonSerializer.Serialize(model, _jsonSerializerOptions)}");
-        // _logger.LogInformation($"GroupId: {model.GroupId}");
-
-        var entry = new EventTableModel
-        {
-            PartitionKey = model.Channel.ChannelUrl,
-            RowKey = Guid.NewGuid().ToString(),
-            Message = "Hello world from Table!!",
-            Json = payload,
-            Created = DateTime.UtcNow, //model.Payload.CreatedAt,
-        };
-
-        // var storageAccountConnectionString = Environment.GetEnvironmentVariable(Constants.AZURE_STORAGE_ACCOUNT_CONNECTION);
-
-        // var tableClient = new TableClient(storageAccountConnectionString, Constants.TABLE_NAME);
-        // await tableClient.CreateIfNotExistsAsync();
-
         // SendBirdGroupChannelMessageSendEventModel.Sender 에 따라 처리할 내용이 다릅니다.
         // TODO: 사용자 타입 데이터를 어떤 필드에서 확인할 수 있는지 확인 필요
-        // When sender: one of [ChManager, Manager]
+        // When Reader == User
 
         var tableClient = await GetTableClient();
 
@@ -101,12 +79,10 @@ public class GroupChannelMessageSendWebHook : HttpTriggerFunctionBase
             foreach (var item in result.Values)
             {
                 await tableClient.DeleteEntityAsync(item.PartitionKey, item.RowKey);
+
                 _logger.LogInformation($"Remove old data. {nameof(EventModel.GroupId)}={model.Channel.ChannelUrl}");
             }
         }
-
-        await tableClient.AddEntityAsync(entry);
-        _logger.LogInformation($"Add event data to Table. {nameof(EventModel.GroupId)}={model.Channel.ChannelUrl}");
 
         return response;
     }

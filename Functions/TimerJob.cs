@@ -25,10 +25,10 @@ public class TimerJob
     [Function("TimerJob")]
     public async Task<QueueResponse<EventModel>> Run(
         [TimerTrigger(Constants.TIMER_SCHEDULE)]
-            MyInfo myTimer)
+        MyInfo myTimer)
     {
         // _logger.LogInformation($"🔨 _jsonSerializerOptions: {_jsonSerializerOptions == null}");
-        _logger.LogInformation($"⚡️ Timer trigger function executed at: {DateTimeOffset.UtcNow:yyyy-MM-ddTHH:mm:ssZ}");
+        _logger.LogInformation($"⚡️ Timer trigger function executed at: {DateTime.UtcNow:yyyy-MM-ddTHH:mm:ssZ}");
         // _logger.LogInformation($"🔨 Next timer schedule at: {myTimer.ScheduleStatus?.Next}");
 
         var result = new QueueResponse<EventModel>();
@@ -39,7 +39,7 @@ public class TimerJob
 
         await tableClient.CreateIfNotExistsAsync();
 
-        var time = DateTimeOffset.UtcNow
+        var time = DateTime.UtcNow
             .AddMinutes(Constants.DELAYED_MIN * -1)
             .ToString("yyyy-MM-ddTHH:mm:ssZ");
 
