@@ -25,16 +25,16 @@ jobs:
           dotnet-version: 6.0.x
 
       - name: Restore dependencies
-        run: dotnet restore
+        run: dotnet restore CloudHospital_UnreadMessageReminderJob.csproj
 
       - name: Build
-        run: dotnet build --no-restore
+        run: dotnet build CloudHospital_UnreadMessageReminderJob.csproj --no-restore
 
       - name: Resolve Project Dependencies Using Dotnet
         shell: bash
         run: |
           pushd './${{ env.AZURE_FUNCTIONAPP_PACKAGE_PATH }}'
-          dotnet build --configuration Release --output ./output
+          dotnet build CloudHospital_UnreadMessageReminderJob.csproj --configuration Release --output ./output
           popd
 
       - name: Run Azure Functions Action
