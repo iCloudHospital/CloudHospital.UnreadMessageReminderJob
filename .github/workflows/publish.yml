@@ -42,5 +42,6 @@ jobs:
         id: fa
         with:
           app-name: ${{ secrets.AZURE_FUNCTIONAPP_NAME }}
+          slot-name: ${{ secrets.AZURE_FUNCTIONAPP_SLOT }}
           package: '${{ env.AZURE_FUNCTIONAPP_PACKAGE_PATH }}/output'
           publish-profile: ${{ secrets.AZURE_FUNCTIONAPP_PUBLISH_PROFILE }}
