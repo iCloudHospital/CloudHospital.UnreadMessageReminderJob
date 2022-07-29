@@ -7,9 +7,9 @@ public abstract class FunctionBase
 {
     protected async Task<TableClient> GetTableClient()
     {
-        var storageAccountConnectionString = Environment.GetEnvironmentVariable(Constants.AZURE_STORAGE_ACCOUNT_CONNECTION);
+        var tableName = GetTableName();
 
-        var tableName = Environment.GetEnvironmentVariable(Constants.ENV_TABLE_NAME);
+        var storageAccountConnectionString = Environment.GetEnvironmentVariable(Constants.AZURE_STORAGE_ACCOUNT_CONNECTION);
 
         var tableClient = new TableClient(storageAccountConnectionString, tableName);
 
@@ -18,15 +18,34 @@ public abstract class FunctionBase
         return tableClient;
     }
 
+    protected string GetTableName()
+    {
+        var stage = Environment.GetEnvironmentVariable(Constants.ENV_STAGE);
+        var tableName = Environment.GetEnvironmentVariable(Constants.ENV_TABLE_NAME);
+
+        var tableNameActural = $"{tableName}{stage}";
+
+        return tableNameActural;
+    }
+
     protected async Task<QueueClient> GetQueueClient()
     {
-        var storageAccountConnectionString = Environment.GetEnvironmentVariable(Constants.AZURE_STORAGE_ACCOUNT_CONNECTION);
+        var queueName = GetQueueName();
 
-        var queueName = Environment.GetEnvironmentVariable(Constants.ENV_QUEUE_NAME);
+        var storageAccountConnectionString = Environment.GetEnvironmentVariable(Constants.AZURE_STORAGE_ACCOUNT_CONNECTION);
 
         var queueClient = new QueueClient(storageAccountConnectionString, queueName);
         await queueClient.CreateIfNotExistsAsync();
 
         return queueClient;
+    }
+
+    protected string GetQueueName()
+    {
+        var stage = Environment.GetEnvironmentVariable(Constants.ENV_STAGE);
+        var queueName = Environment.GetEnvironmentVariable(Constants.ENV_QUEUE_NAME);
+        var queueNameActural = $"{queueName}{stage}";
+
+        return queueNameActural;
     }
 }

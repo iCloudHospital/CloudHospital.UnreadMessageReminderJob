@@ -46,9 +46,9 @@ public class TimerJob : FunctionBase
 
         _logger.LogInformation(@$"🔨 Timer trigger information:
 Timer schedule         : {Environment.GetEnvironmentVariable(Constants.ENV_TIMER_SCHEDULE)}        
-Table                  : {(tableClient.Name == Environment.GetEnvironmentVariable(Constants.ENV_TABLE_NAME) ? "Ready" : "Table is not READY")}
-Queue                  : {(queueClient.Name == Environment.GetEnvironmentVariable(Constants.ENV_QUEUE_NAME) ? "Ready" : "Queue is not READY")}
-Unread delayed minutes : {unreadDelayMinutes} MIN
+Table                  : {(tableClient.Name == GetTableName() ? "✅ Ready" : "❌ Table is not READY")}
+Queue                  : {(queueClient.Name == GetQueueName() ? "✅ Ready" : "❌ Queue is not READY")}
+Unread delayed minutes : {unreadDelayMinutesValue} MIN
         ");
 
         var time = DateTime.UtcNow
@@ -95,7 +95,7 @@ Unread delayed minutes : {unreadDelayMinutes} MIN
 /// <typeparam name="T"></typeparam>
 public class QueueResponse<T>
 {
-    [QueueOutput("%QueueName%", Connection = Constants.AZURE_STORAGE_ACCOUNT_CONNECTION)]
+    [QueueOutput("%QueueName%%Stage%", Connection = Constants.AZURE_STORAGE_ACCOUNT_CONNECTION)]
     public List<T> Items { get; set; } = new List<T>();
 }
 

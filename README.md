@@ -37,11 +37,29 @@ Process dequeued event data.
 
 ## Settings
 
+| Environment Variable |  Required | Note |
+| :------------------: |  :------: | :--- |
+| Stage                | ✅        | Application staging |
+| AzureWebJobsStorage  | ✅        |Azure Storage Account connection string |
+| Database             | ✅        |Azure SQL Database connection string |
+| QueueName            | ✅        |Queue name base; Actual queue name is `$(queuename)$(stage)`; e.g.) QueueName: myqueue, Stage: prod ➡️ myqueueprod |
+| TableName            | ✅        |Table name base; Actual table name is `$(tablename)$(stage)`; e.g.) TableName: mytable, Stage: prod ➡️ mytableprod |
+| TimerSchedule        | ✅        |Timer schedule; Cron style schedule; e.g.) Trigger every 5 minutes. ➡️ 0 */5 * * * * |
+| UnreadDelayMinutes   | ✅        |Unread message criteria minutes. |
+| SendGridApiKey       | ✅        |Sendgrid api key |
+| SendGridSenderEmail  | ✅        |Sender email address |
+| SendGridSenderName   | ✅        |Sender display name |
+
+
 ```json
 {
     "Stage": "<stage>",
     "AzureWebJobsStorage": "<Azure Storage Account connection string; with queue-endpoint, table-endpoint>",
     "Database": "<Azure SQL Database connection string>",
+    "QueueName": "<queue name base>",
+    "TableName": "<table name base>",
+    "TimerSchedule": "<timer schedume; 0 */1 * * * *>",
+    "UnreadDelayMinutes": <Unread message criteria minutes; 5>,
     "SendGridApiKey": "<sendgrid api key>",
     "SendGridSenderEmail": "<sender email address>",
     "SendGridSenderName": "<sender name>",
@@ -56,6 +74,10 @@ $ echo '{
     "Stage": "<stage>",
     "AzureWebJobsStorage": "<Azure Storage Account connection string; with queue-endpoint, table-endpoint>",
     "Database": "<Azure SQL Database connection string>",
+    "QueueName": "sendbirdmessages",
+    "TableName": "sendbirdmessages",
+    "TimerSchedule": "0 */5 * * * *",
+    "UnreadDelayMinutes": 5,
     "SendGridApiKey": "<sendgrid api key>",
     "SendGridSenderEmail": "<sender email address>",
     "SendGridSenderName": "<sender name>",
