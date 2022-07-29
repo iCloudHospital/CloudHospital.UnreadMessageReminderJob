@@ -11,6 +11,8 @@ public class Constants
     public const string ENV_TIMER_SCHEDULE = "TimerSchedule";
     public const string ENV_UNREAD_DELAY_MINUTES = "UnreadDelayMinutes";
 
+    public const string ENV_DEBUG = "Debug";
+
     // public const string QUEUE_NAME = "sendbirdmessages";
 
     /// <summary>

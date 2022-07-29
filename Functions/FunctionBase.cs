@@ -5,6 +5,13 @@ namespace CloudHospital.UnreadMessageReminderJob;
 
 public abstract class FunctionBase
 {
+    public FunctionBase()
+    {
+        isInDebug = GetDebugMode();
+    }
+
+    protected bool IsInDebug => isInDebug;
+
     protected async Task<TableClient> GetTableClient()
     {
         var tableName = GetTableName();
@@ -48,4 +55,19 @@ public abstract class FunctionBase
 
         return queueNameActural;
     }
+
+    private bool GetDebugMode()
+    {
+        var debug = Environment.GetEnvironmentVariable(Constants.ENV_DEBUG);
+        if (!bool.TryParse(debug, out bool isDebug))
+        {
+            return false;
+        }
+
+        return isDebug;
+    }
+
+
+
+    private readonly bool isInDebug;
 }

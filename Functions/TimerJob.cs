@@ -16,6 +16,7 @@ public class TimerJob : FunctionBase
     public TimerJob(
         IOptionsMonitor<JsonSerializerOptions> jsonSerializerOptionsAccessor,
         ILoggerFactory loggerFactory)
+        : base()
     {
         _jsonSerializerOptions = jsonSerializerOptionsAccessor.CurrentValue;
         _logger = loggerFactory.CreateLogger<TimerJob>();
@@ -26,9 +27,12 @@ public class TimerJob : FunctionBase
         [TimerTrigger("%TimerSchedule%")]
         MyInfo myTimer)
     {
-        // _logger.LogInformation($"🔨 _jsonSerializerOptions: {_jsonSerializerOptions == null}");
         _logger.LogInformation($"⚡️ Timer trigger function executed at: {DateTime.UtcNow:yyyy-MM-ddTHH:mm:ssZ}");
-        // _logger.LogInformation($"🔨 Next timer schedule at: {myTimer.ScheduleStatus?.Next}");
+        if (IsInDebug)
+        {
+            // _logger.LogInformation($"🔨 _jsonSerializerOptions: {_jsonSerializerOptions == null}");
+            // _logger.LogInformation($"🔨 Next timer schedule at: {myTimer.ScheduleStatus?.Next}");
+        }
 
         var unreadDelayMinutes = Environment.GetEnvironmentVariable(Constants.ENV_UNREAD_DELAY_MINUTES);
         // int unreadDelayMinutesValue = 0;
@@ -44,12 +48,15 @@ public class TimerJob : FunctionBase
         // Make sure exists queue in queue storage
         var queueClient = await GetQueueClient();
 
-        _logger.LogInformation(@$"🔨 Timer trigger information:
+        if (IsInDebug)
+        {
+            _logger.LogInformation(@$"🔨 Timer trigger information:
 Timer schedule         : {Environment.GetEnvironmentVariable(Constants.ENV_TIMER_SCHEDULE)}        
 Table                  : {(tableClient.Name == GetTableName() ? "✅ Ready" : "❌ Table is not READY")}
 Queue                  : {(queueClient.Name == GetQueueName() ? "✅ Ready" : "❌ Queue is not READY")}
 Unread delayed minutes : {unreadDelayMinutesValue} MIN
         ");
+        }
 
         var time = DateTime.UtcNow
             .AddMinutes(unreadDelayMinutesValue * -1)
@@ -57,13 +64,19 @@ Unread delayed minutes : {unreadDelayMinutesValue} MIN
 
         var filter = $"{nameof(EventTableModel.Created)} lt datetime'{time}'";
 
-        // _logger.LogInformation($"🔨 filter: {filter}");
+        if (IsInDebug)
+        {
+            _logger.LogInformation($"🔨 filter: {filter}");
+        }
 
         var items = tableClient.QueryAsync<EventTableModel>(filter: filter).AsPages();
 
         await foreach (var item in items)
         {
-            _logger.LogInformation($">> Filtered items count: {item.Values.Count}");
+            if (IsInDebug)
+            {
+                _logger.LogInformation($">> Filtered items count: {item.Values.Count}");
+            }
 
             foreach (var entry in item.Values)
             {
@@ -72,15 +85,24 @@ Unread delayed minutes : {unreadDelayMinutesValue} MIN
                 {
                     // enqueue
                     result.Items.Add(model);
-                    _logger.LogInformation(">> Enqueue item");
+                    if (IsInDebug)
+                    {
+                        _logger.LogInformation(">> Enqueue item");
+                    }
 
                     // Remove item in table 
                     await tableClient.DeleteEntityAsync(entry.PartitionKey, entry.RowKey);
-                    _logger.LogInformation(">> Remove item from table");
+                    if (IsInDebug)
+                    {
+                        _logger.LogInformation(">> Remove item from table");
+                    }
                 }
                 else
                 {
-                    _logger.LogWarning($"Deserialization was faild. partitionkey: {entry.PartitionKey}, rowkey:{entry.RowKey}");
+                    if (IsInDebug)
+                    {
+                        _logger.LogWarning($"Deserialization was faild. partitionkey: {entry.PartitionKey}, rowkey:{entry.RowKey}");
+                    }
                 }
             }
         }

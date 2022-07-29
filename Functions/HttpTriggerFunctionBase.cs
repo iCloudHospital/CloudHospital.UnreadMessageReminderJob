@@ -5,6 +5,11 @@ namespace CloudHospital.UnreadMessageReminderJob;
 
 public abstract class HttpTriggerFunctionBase : FunctionBase
 {
+    public HttpTriggerFunctionBase() : base()
+    {
+
+    }
+
     protected HttpResponseData CreateResponse(HttpRequestData req, HttpStatusCode statusCode, string content = null)
     {
         var response = req.CreateResponse(statusCode);
