@@ -39,6 +39,7 @@ Process dequeued event data.
 
 ```json
 {
+    "Stage": "<stage>",
     "AzureWebJobsStorage": "<Azure Storage Account connection string; with queue-endpoint, table-endpoint>",
     "Database": "<Azure SQL Database connection string>",
     "SendGridApiKey": "<sendgrid api key>",
@@ -52,6 +53,7 @@ Process dequeued event data.
 $ echo '{
   "IsEncrypted": false,
   "Values": {
+    "Stage": "<stage>",
     "AzureWebJobsStorage": "<Azure Storage Account connection string; with queue-endpoint, table-endpoint>",
     "Database": "<Azure SQL Database connection string>",
     "SendGridApiKey": "<sendgrid api key>",

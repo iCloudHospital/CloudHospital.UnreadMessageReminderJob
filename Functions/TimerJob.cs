@@ -1,6 +1,5 @@
 using System;
 using System.Text.Json;
-using Azure.Data.Tables;
 using CloudHospital.UnreadMessageReminderJob.Models;
 using Microsoft.Azure.Functions.Worker;
 using Microsoft.Extensions.Logging;
@@ -8,7 +7,7 @@ using Microsoft.Extensions.Options;
 
 namespace CloudHospital.UnreadMessageReminderJob;
 
-public class TimerJob
+public class TimerJob : FunctionBase
 {
     private readonly JsonSerializerOptions _jsonSerializerOptions;
 
@@ -24,23 +23,36 @@ public class TimerJob
 
     [Function("TimerJob")]
     public async Task<QueueResponse<SendBirdGroupChannelMessageSendEventModel>> Run(
-        [TimerTrigger(Constants.TIMER_SCHEDULE)]
+        [TimerTrigger("%TimerSchedule%")]
         MyInfo myTimer)
     {
         // _logger.LogInformation($"🔨 _jsonSerializerOptions: {_jsonSerializerOptions == null}");
         _logger.LogInformation($"⚡️ Timer trigger function executed at: {DateTime.UtcNow:yyyy-MM-ddTHH:mm:ssZ}");
         // _logger.LogInformation($"🔨 Next timer schedule at: {myTimer.ScheduleStatus?.Next}");
 
+        var unreadDelayMinutes = Environment.GetEnvironmentVariable(Constants.ENV_UNREAD_DELAY_MINUTES);
+        // int unreadDelayMinutesValue = 0;
+        if (!int.TryParse(unreadDelayMinutes, out int unreadDelayMinutesValue))
+        {
+            unreadDelayMinutesValue = 5;
+        }
+
         var result = new QueueResponse<SendBirdGroupChannelMessageSendEventModel>();
 
-        var storageAccountConnectionString = Environment.GetEnvironmentVariable(Constants.AZURE_STORAGE_ACCOUNT_CONNECTION);
+        // Make sure to exists table in table storage
+        var tableClient = await GetTableClient();
+        // Make sure exists queue in queue storage
+        var queueClient = await GetQueueClient();
 
-        var tableClient = new TableClient(storageAccountConnectionString, Constants.TABLE_NAME);
-
-        await tableClient.CreateIfNotExistsAsync();
+        _logger.LogInformation(@$"🔨 Timer trigger information:
+Timer schedule         : {Environment.GetEnvironmentVariable(Constants.ENV_TIMER_SCHEDULE)}        
+Table                  : {(tableClient.Name == Environment.GetEnvironmentVariable(Constants.ENV_TABLE_NAME) ? "Ready" : "Table is not READY")}
+Queue                  : {(queueClient.Name == Environment.GetEnvironmentVariable(Constants.ENV_QUEUE_NAME) ? "Ready" : "Queue is not READY")}
+Unread delayed minutes : {unreadDelayMinutes} MIN
+        ");
 
         var time = DateTime.UtcNow
-            .AddMinutes(Constants.DELAYED_MIN * -1)
+            .AddMinutes(unreadDelayMinutesValue * -1)
             .ToString("yyyy-MM-ddTHH:mm:ssZ");
 
         var filter = $"{nameof(EventTableModel.Created)} lt datetime'{time}'";
@@ -75,6 +87,16 @@ public class TimerJob
 
         return result;
     }
+}
+
+/// <summary>
+/// Queue output binding wrapper
+/// </summary>
+/// <typeparam name="T"></typeparam>
+public class QueueResponse<T>
+{
+    [QueueOutput("%QueueName%", Connection = Constants.AZURE_STORAGE_ACCOUNT_CONNECTION)]
+    public List<T> Items { get; set; } = new List<T>();
 }
 
 public class MyInfo
