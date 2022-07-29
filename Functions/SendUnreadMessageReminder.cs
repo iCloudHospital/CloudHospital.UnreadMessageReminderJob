@@ -8,12 +8,15 @@ using Microsoft.Extensions.Logging;
 
 namespace CloudHospital.UnreadMessageReminderJob;
 
-public class SendUnreadMessageReminder
+public class SendUnreadMessageReminder : FunctionBase
 {
     private readonly EmailSender _emailSender;
     private readonly ILogger _logger;
 
-    public SendUnreadMessageReminder(EmailSender emailSender, ILoggerFactory loggerFactory)
+    public SendUnreadMessageReminder(
+        EmailSender emailSender,
+        ILoggerFactory loggerFactory)
+        : base()
     {
         _emailSender = emailSender;
         _logger = loggerFactory.CreateLogger<SendUnreadMessageReminder>();
@@ -21,14 +24,15 @@ public class SendUnreadMessageReminder
 
     [Function("SendUnreadMessageReminder")]
     public async Task Run(
-        [QueueTrigger(Constants.QUEUE_NAME, Connection = Constants.AZURE_STORAGE_ACCOUNT_CONNECTION)]
+        [QueueTrigger("%QueueName%%Stage%", Connection = Constants.AZURE_STORAGE_ACCOUNT_CONNECTION)]
             SendBirdGroupChannelMessageSendEventModel item)
     {
         _logger.LogInformation($"⚡️ Dequeue item: {nameof(SendBirdGroupChannelMessageSendEventModel.Channel.ChannelUrl)}={item.Channel.ChannelUrl} {nameof(SendBirdGroupChannelMessageSendEventModel.Payload.MessageId)}={item.Payload.MessageId}");
-
-        _logger.LogInformation($"🚀 {item.Payload?.Message} created at {item.Payload?.CreatedAt:HH:mm:ss}. now:{DateTime.UtcNow:HH:mm:ss}");
-
-        _logger.LogInformation($"🔨 Email sender is ready: {_emailSender != null}");
+        if (IsInDebug)
+        {
+            _logger.LogInformation($"🚀 {item.Payload?.Message} created at {item.Payload?.CreatedAt:HH:mm:ss}. now:{DateTime.UtcNow:HH:mm:ss}");
+            _logger.LogInformation($"🔨 Email sender is ready: {_emailSender != null}");
+        }
 
         // TODO: 사용자 타입 데이터를 어떤 필드에서 확인할 수 있는지 확인 필요
         // sender == [ChManager, Manager]
@@ -40,15 +44,21 @@ public class SendUnreadMessageReminder
         var user = await GetUser(userId);
         if (user == null)
         {
-            _logger.LogWarning("User does not find");
+            if (IsInDebug)
+            {
+                _logger.LogWarning("User does not find");
+            }
         }
         else
         {
-            _logger.LogInformation(@$"🔨 User:
+            if (IsInDebug)
+            {
+                _logger.LogInformation(@$"🔨 User:
 {nameof(UserModel.Id)}={user.Id}
 {nameof(UserModel.Email)}={user.Email}
 {nameof(UserModel.FullName)}={user.FullName}
 ");
+            }
         }
 
         // user = new UserModel

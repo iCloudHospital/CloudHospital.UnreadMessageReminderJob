@@ -20,6 +20,7 @@ public class GroupChannelMessageReadWebHook : HttpTriggerFunctionBase
     public GroupChannelMessageReadWebHook(
         IOptionsMonitor<JsonSerializerOptions> jsonSerializerOptionsAccessor,
         ILoggerFactory loggerFactory)
+        : base()
     {
         _jsonSerializerOptions = jsonSerializerOptionsAccessor.CurrentValue;
         _logger = loggerFactory.CreateLogger<GroupChannelMessageSendWebHook>();
@@ -66,6 +67,13 @@ public class GroupChannelMessageReadWebHook : HttpTriggerFunctionBase
             return CreateResponse(req, HttpStatusCode.BadRequest);
         }
 
+        if (IsInDebug)
+        {
+            _logger.LogInformation($"Payload #1: {payload}");
+            // _logger.LogInformation($"Payload #2: {JsonSerializer.Serialize(model, _jsonSerializerOptions)}");
+            // _logger.LogInformation($"GroupId: {model.GroupId}");
+        }
+
         // SendBirdGroupChannelMessageSendEventModel.Sender 에 따라 처리할 내용이 다릅니다.
         // TODO: 사용자 타입 데이터를 어떤 필드에서 확인할 수 있는지 확인 필요
         // When Reader == User
@@ -80,7 +88,10 @@ public class GroupChannelMessageReadWebHook : HttpTriggerFunctionBase
             {
                 await tableClient.DeleteEntityAsync(item.PartitionKey, item.RowKey);
 
-                _logger.LogInformation($"Remove old data. {nameof(EventTableModel.PartitionKey)}={model.Channel.ChannelUrl}");
+                if (IsInDebug)
+                {
+                    _logger.LogInformation($"Remove old data. {nameof(EventTableModel.PartitionKey)}={model.Channel.ChannelUrl}");
+                }
             }
         }
 

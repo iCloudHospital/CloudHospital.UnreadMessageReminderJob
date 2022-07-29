@@ -20,7 +20,7 @@ public class GroupChannelMessageSendWebHook : HttpTriggerFunctionBase
 
     public GroupChannelMessageSendWebHook(
         IOptionsMonitor<JsonSerializerOptions> jsonSerializerOptionsAccessor,
-        ILoggerFactory loggerFactory)
+        ILoggerFactory loggerFactory) : base()
     {
         _jsonSerializerOptions = jsonSerializerOptionsAccessor.CurrentValue;
         _logger = loggerFactory.CreateLogger<GroupChannelMessageSendWebHook>();
@@ -68,9 +68,12 @@ public class GroupChannelMessageSendWebHook : HttpTriggerFunctionBase
             return CreateResponse(req, HttpStatusCode.BadRequest);
         }
 
-        // _logger.LogInformation($"Payload #1: {payload}");
-        // _logger.LogInformation($"Payload #2: {JsonSerializer.Serialize(model, _jsonSerializerOptions)}");
-        // _logger.LogInformation($"GroupId: {model.GroupId}");
+        if (IsInDebug)
+        {
+            _logger.LogInformation($"Payload #1: {payload}");
+            // _logger.LogInformation($"Payload #2: {JsonSerializer.Serialize(model, _jsonSerializerOptions)}");
+            // _logger.LogInformation($"GroupId: {model.GroupId}");
+        }
 
         var entry = new EventTableModel
         {
@@ -80,11 +83,6 @@ public class GroupChannelMessageSendWebHook : HttpTriggerFunctionBase
             Json = payload,
             Created = DateTime.UtcNow, //model.Payload.CreatedAt,
         };
-
-        // var storageAccountConnectionString = Environment.GetEnvironmentVariable(Constants.AZURE_STORAGE_ACCOUNT_CONNECTION);
-
-        // var tableClient = new TableClient(storageAccountConnectionString, Constants.TABLE_NAME);
-        // await tableClient.CreateIfNotExistsAsync();
 
         // SendBirdGroupChannelMessageSendEventModel.Sender 에 따라 처리할 내용이 다릅니다.
         // TODO: 사용자 타입 데이터를 어떤 필드에서 확인할 수 있는지 확인 필요
@@ -99,12 +97,18 @@ public class GroupChannelMessageSendWebHook : HttpTriggerFunctionBase
             foreach (var item in result.Values)
             {
                 await tableClient.DeleteEntityAsync(item.PartitionKey, item.RowKey);
-                _logger.LogInformation($"Remove old data. {nameof(EventTableModel.PartitionKey)}={model.Channel.ChannelUrl}");
+                if (IsInDebug)
+                {
+                    _logger.LogInformation($"Remove old data. {nameof(EventTableModel.PartitionKey)}={model.Channel.ChannelUrl}");
+                }
             }
         }
 
         await tableClient.AddEntityAsync(entry);
-        _logger.LogInformation($"Add event data to Table. {nameof(EventTableModel.PartitionKey)}={model.Channel.ChannelUrl}");
+        if (IsInDebug)
+        {
+            _logger.LogInformation($"Add event data to Table. {nameof(EventTableModel.PartitionKey)}={model.Channel.ChannelUrl}");
+        }
 
         return response;
     }

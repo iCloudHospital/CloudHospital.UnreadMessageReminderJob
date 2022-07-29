@@ -1,6 +1,5 @@
 using System;
 using System.Text.Json;
-using Azure.Data.Tables;
 using CloudHospital.UnreadMessageReminderJob.Models;
 using Microsoft.Azure.Functions.Worker;
 using Microsoft.Extensions.Logging;
@@ -8,7 +7,7 @@ using Microsoft.Extensions.Options;
 
 namespace CloudHospital.UnreadMessageReminderJob;
 
-public class TimerJob
+public class TimerJob : FunctionBase
 {
     private readonly JsonSerializerOptions _jsonSerializerOptions;
 
@@ -17,6 +16,7 @@ public class TimerJob
     public TimerJob(
         IOptionsMonitor<JsonSerializerOptions> jsonSerializerOptionsAccessor,
         ILoggerFactory loggerFactory)
+        : base()
     {
         _jsonSerializerOptions = jsonSerializerOptionsAccessor.CurrentValue;
         _logger = loggerFactory.CreateLogger<TimerJob>();
@@ -24,34 +24,59 @@ public class TimerJob
 
     [Function("TimerJob")]
     public async Task<QueueResponse<SendBirdGroupChannelMessageSendEventModel>> Run(
-        [TimerTrigger(Constants.TIMER_SCHEDULE)]
+        [TimerTrigger("%TimerSchedule%")]
         MyInfo myTimer)
     {
-        // _logger.LogInformation($"🔨 _jsonSerializerOptions: {_jsonSerializerOptions == null}");
         _logger.LogInformation($"⚡️ Timer trigger function executed at: {DateTime.UtcNow:yyyy-MM-ddTHH:mm:ssZ}");
-        // _logger.LogInformation($"🔨 Next timer schedule at: {myTimer.ScheduleStatus?.Next}");
+        if (IsInDebug)
+        {
+            // _logger.LogInformation($"🔨 _jsonSerializerOptions: {_jsonSerializerOptions == null}");
+            // _logger.LogInformation($"🔨 Next timer schedule at: {myTimer.ScheduleStatus?.Next}");
+        }
+
+        var unreadDelayMinutes = Environment.GetEnvironmentVariable(Constants.ENV_UNREAD_DELAY_MINUTES);
+        // int unreadDelayMinutesValue = 0;
+        if (!int.TryParse(unreadDelayMinutes, out int unreadDelayMinutesValue))
+        {
+            unreadDelayMinutesValue = 5;
+        }
 
         var result = new QueueResponse<SendBirdGroupChannelMessageSendEventModel>();
 
-        var storageAccountConnectionString = Environment.GetEnvironmentVariable(Constants.AZURE_STORAGE_ACCOUNT_CONNECTION);
+        // Make sure to exists table in table storage
+        var tableClient = await GetTableClient();
+        // Make sure exists queue in queue storage
+        var queueClient = await GetQueueClient();
 
-        var tableClient = new TableClient(storageAccountConnectionString, Constants.TABLE_NAME);
-
-        await tableClient.CreateIfNotExistsAsync();
+        if (IsInDebug)
+        {
+            _logger.LogInformation(@$"🔨 Timer trigger information:
+Timer schedule         : {Environment.GetEnvironmentVariable(Constants.ENV_TIMER_SCHEDULE)}        
+Table                  : {(tableClient.Name == GetTableName() ? "✅ Ready" : "❌ Table is not READY")}
+Queue                  : {(queueClient.Name == GetQueueName() ? "✅ Ready" : "❌ Queue is not READY")}
+Unread delayed minutes : {unreadDelayMinutesValue} MIN
+        ");
+        }
 
         var time = DateTime.UtcNow
-            .AddMinutes(Constants.DELAYED_MIN * -1)
+            .AddMinutes(unreadDelayMinutesValue * -1)
             .ToString("yyyy-MM-ddTHH:mm:ssZ");
 
         var filter = $"{nameof(EventTableModel.Created)} lt datetime'{time}'";
 
-        // _logger.LogInformation($"🔨 filter: {filter}");
+        if (IsInDebug)
+        {
+            _logger.LogInformation($"🔨 filter: {filter}");
+        }
 
         var items = tableClient.QueryAsync<EventTableModel>(filter: filter).AsPages();
 
         await foreach (var item in items)
         {
-            _logger.LogInformation($">> Filtered items count: {item.Values.Count}");
+            if (IsInDebug)
+            {
+                _logger.LogInformation($">> Filtered items count: {item.Values.Count}");
+            }
 
             foreach (var entry in item.Values)
             {
@@ -60,21 +85,40 @@ public class TimerJob
                 {
                     // enqueue
                     result.Items.Add(model);
-                    _logger.LogInformation(">> Enqueue item");
+                    if (IsInDebug)
+                    {
+                        _logger.LogInformation(">> Enqueue item");
+                    }
 
                     // Remove item in table 
                     await tableClient.DeleteEntityAsync(entry.PartitionKey, entry.RowKey);
-                    _logger.LogInformation(">> Remove item from table");
+                    if (IsInDebug)
+                    {
+                        _logger.LogInformation(">> Remove item from table");
+                    }
                 }
                 else
                 {
-                    _logger.LogWarning($"Deserialization was faild. partitionkey: {entry.PartitionKey}, rowkey:{entry.RowKey}");
+                    if (IsInDebug)
+                    {
+                        _logger.LogWarning($"Deserialization was faild. partitionkey: {entry.PartitionKey}, rowkey:{entry.RowKey}");
+                    }
                 }
             }
         }
 
         return result;
     }
+}
+
+/// <summary>
+/// Queue output binding wrapper
+/// </summary>
+/// <typeparam name="T"></typeparam>
+public class QueueResponse<T>
+{
+    [QueueOutput("%QueueName%%Stage%", Connection = Constants.AZURE_STORAGE_ACCOUNT_CONNECTION)]
+    public List<T> Items { get; set; } = new List<T>();
 }
 
 public class MyInfo

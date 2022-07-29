@@ -11,6 +11,7 @@ Insert wrapped event data from HTTP request body into table storage.
 HTTP 요청 본문을 테이블 스토리지에 입력합니다.
 
 POST: /api/GroupChannelMessageSendWebHook
+
 payload: [group_channel:message_send event](https://sendbird.com/docs/chat/v3/platform-api/webhook/events/group-channel#2-group_channel-message_send)
 
 Removes queued entries in table storage with the channel.channel_url value in the HTTP request body.
@@ -18,6 +19,7 @@ Removes queued entries in table storage with the channel.channel_url value in th
 HTTP 요청 본문의 channel.channel_url 값으로 테이블 스토리지에 대기중인 항목을 제거합니다.
 
 POST: /api/GroupChannelMessageReadWebHook
+
 payload: [group_channel:message_read event](https://sendbird.com/docs/chat/v3/platform-api/webhook/events/group-channel#2-group_channel-message_read)
 
 
@@ -35,13 +37,34 @@ Process dequeued event data.
 
 ## Settings
 
+| Environment Variable |  Required | Note |
+| :------------------: |  :------: | :--- |
+| Stage                | ✅        | Application staging |
+| AzureWebJobsStorage  | ✅        | Azure Storage Account connection string |
+| Database             | ✅        | Azure SQL Database connection string |
+| QueueName            | ✅        | Queue name base; Actual queue name is `$(queuename)$(stage)`; e.g.) QueueName: myqueue, Stage: prod ➡️ myqueueprod |
+| TableName            | ✅        | Table name base; Actual table name is `$(tablename)$(stage)`; e.g.) TableName: mytable, Stage: prod ➡️ mytableprod |
+| TimerSchedule        | ✅        | Timer schedule; Cron style schedule; e.g.) Trigger every 5 minutes. ➡️ 0 */5 * * * * |
+| UnreadDelayMinutes   | ✅        | Unread message criteria minutes. |
+| SendGridApiKey       | ✅        | Sendgrid api key |
+| SendGridSenderEmail  | ✅        | Sender email address |
+| SendGridSenderName   | ✅        | Sender display name |
+| Debug                |           | Show more information |
+
+
 ```json
 {
+    "Stage": "<stage>",
     "AzureWebJobsStorage": "<Azure Storage Account connection string; with queue-endpoint, table-endpoint>",
     "Database": "<Azure SQL Database connection string>",
+    "QueueName": "<queue name base>",
+    "TableName": "<table name base>",
+    "TimerSchedule": "<timer schedume; 0 */1 * * * *>",
+    "UnreadDelayMinutes": <Unread message criteria minutes; 5>,
     "SendGridApiKey": "<sendgrid api key>",
     "SendGridSenderEmail": "<sender email address>",
     "SendGridSenderName": "<sender name>",
+    "Debug": false,
     "FUNCTIONS_WORKER_RUNTIME": "dotnet-isolated"
 }
 ```
@@ -50,11 +73,17 @@ Process dequeued event data.
 $ echo '{
   "IsEncrypted": false,
   "Values": {
+    "Stage": "<stage>",
     "AzureWebJobsStorage": "<Azure Storage Account connection string; with queue-endpoint, table-endpoint>",
     "Database": "<Azure SQL Database connection string>",
+    "QueueName": "sendbirdmessages",
+    "TableName": "sendbirdmessages",
+    "TimerSchedule": "0 */5 * * * *",
+    "UnreadDelayMinutes": 5,
     "SendGridApiKey": "<sendgrid api key>",
     "SendGridSenderEmail": "<sender email address>",
     "SendGridSenderName": "<sender name>",
+    "Debug": false,
     "FUNCTIONS_WORKER_RUNTIME": "dotnet-isolated"
   }
 }' >> local.settings.json
