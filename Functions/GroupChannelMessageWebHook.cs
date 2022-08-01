@@ -340,10 +340,10 @@ public class GroupChannelMessageWebHook : HttpTriggerFunctionBase
         using (var hmac = new HMACSHA256(keyBinaries))
         {
             var hashedValue = hmac.ComputeHash(signatureRawData);
-            hashedString = Convert.ToBase64String(hashedValue);
+            hashedString = string.Join("", hashedValue.Select(x => x.ToString("x2")));
         }
 
-        var authorizedRequest = signature.Equals(hashedString, StringComparison.Ordinal);
+        var authorizedRequest = signature.Equals(hashedString, StringComparison.OrdinalIgnoreCase);
 
         if (isInDebug)
         {
