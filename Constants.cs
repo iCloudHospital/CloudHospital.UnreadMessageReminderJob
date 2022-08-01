@@ -10,7 +10,7 @@ public class Constants
     public const string ENV_TABLE_NAME = "TableName";
     public const string ENV_TIMER_SCHEDULE = "TimerSchedule";
     public const string ENV_UNREAD_DELAY_MINUTES = "UnreadDelayMinutes";
-
+    public const string ENV_SENDBIRD_API_KEY = "SendBirdApiKey";
     public const string ENV_DEBUG = "Debug";
 
     // public const string QUEUE_NAME = "sendbirdmessages";
@@ -25,4 +25,6 @@ public class Constants
     public const string AZURE_SQL_DATABASE_CONNECTION = "Database";
 
     // public const int DELAYED_MIN = 2;
+
+    public const string REQUEST_HEAD_SENDBIRD_SIGNATURE = "x-sendbird-signature";
 }
