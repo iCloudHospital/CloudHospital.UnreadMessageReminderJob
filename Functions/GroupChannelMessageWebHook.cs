@@ -20,7 +20,7 @@ public class GroupChannelMessageWebHook : HttpTriggerFunctionBase
         : base()
     {
         _jsonSerializerOptions = jsonSerializerOptionsAccessor.CurrentValue;
-        _logger = loggerFactory.CreateLogger<GroupChannelMessageSendWebHook>();
+        _logger = loggerFactory.CreateLogger<GroupChannelMessageWebHook>();
     }
 
     [Function("GroupChannelMessageWebHook")]
@@ -100,7 +100,7 @@ public class GroupChannelMessageWebHook : HttpTriggerFunctionBase
 
     private async Task<HttpResponseData> ProcessGroupChannelMessageRead(HttpRequestData req, string payload)
     {
-        _logger.LogInformation($"⚡️ [{nameof(GroupChannelMessageReadWebHook)}] HTTP trigger function processed a request.");
+        _logger.LogInformation($"⚡️ [group_channel:message_read] HTTP trigger function processed a request.");
 
         SendBirdGroupChannelMessageSendEventModel model = null;
 
@@ -171,7 +171,7 @@ public class GroupChannelMessageWebHook : HttpTriggerFunctionBase
 
     private async Task<HttpResponseData> ProcessGroupChannelMessageSend(HttpRequestData req, string payload)
     {
-        _logger.LogInformation($"⚡️ [{nameof(GroupChannelMessageSendWebHook)}] HTTP trigger function processed a request.");
+        _logger.LogInformation($"⚡️ [group_channel:message_send] HTTP trigger function processed a request.");
 
         SendBirdGroupChannelMessageSendEventModel model = null;
 
