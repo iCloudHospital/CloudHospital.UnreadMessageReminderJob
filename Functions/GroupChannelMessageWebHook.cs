@@ -251,6 +251,14 @@ public class GroupChannelMessageWebHook : HttpTriggerFunctionBase
             // _logger.LogInformation($"GroupId: {model.GroupId}");
         }
 
+        var targetUserTypes = new string[] { SendBirdSenderUserTypes.ChManager, SendBirdSenderUserTypes.Manager };
+
+        if (!targetUserTypes.Contains(model.Sender.Metadata.UserType))
+        {
+            // target userType is one of [CHManager, Manager]
+            return response;
+        }
+
         var entry = new EventTableModel
         {
             PartitionKey = model.Channel.ChannelUrl,
@@ -281,6 +289,7 @@ public class GroupChannelMessageWebHook : HttpTriggerFunctionBase
         }
 
         await tableClient.AddEntityAsync(entry);
+
         if (IsInDebug)
         {
             _logger.LogInformation($"Add event data to Table. {nameof(EventTableModel.PartitionKey)}={model.Channel.ChannelUrl}");
