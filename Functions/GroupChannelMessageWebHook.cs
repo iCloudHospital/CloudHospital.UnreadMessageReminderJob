@@ -27,7 +27,7 @@ public class GroupChannelMessageWebHook : HttpTriggerFunctionBase
 
     [Function("GroupChannelMessageWebHook")]
     public async Task<HttpResponseData> Run(
-        [HttpTrigger(AuthorizationLevel.Function, "post")]
+        [HttpTrigger(AuthorizationLevel.Anonymous, "post")]
             HttpRequestData req)
     {
         _logger.LogInformation($"⚡️ [{nameof(GroupChannelMessageWebHook)}] HTTP trigger function processed a request.");

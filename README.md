@@ -49,6 +49,7 @@ Process dequeued event data.
 | SendGridApiKey       | ✅        | Sendgrid api key |
 | SendGridSenderEmail  | ✅        | Sender email address |
 | SendGridSenderName   | ✅        | Sender display name |
+| SendBirdApiKey       | ✅        | Sendbird api key (master only) |
 | Debug                |           | Show more information |
 
 
