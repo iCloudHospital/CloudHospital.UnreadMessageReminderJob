@@ -39,8 +39,11 @@ public class SendUnreadMessageReminder : FunctionBase
 
         // TODO: How to prepare template id and template data for sendgrid service 
 
+        var member = item.Members
+            .FirstOrDefault(x => string.IsNullOrWhiteSpace(x.Metadata?.UserType));
+
         //! find user email
-        var userId = "001b7d3c-3a9a-4204-bf27-b094aa7c9cef";
+        var userId = member.UserId;
         var user = await GetUser(userId);
         if (user == null)
         {
@@ -71,8 +74,11 @@ public class SendUnreadMessageReminder : FunctionBase
 
         // send email using sendgrid template
         var templateData = GetSampleTemplateData(user.FullName, item.Sender.Nickname, item.Payload.Message, item.Payload.CreatedAt);
-
-        // await _emailSender.SendEmailAsync(user.Email, user.FullName, EmailTemplateIds.UnreadMessage, templateData);
+        if (IsInDebug && member.Nickname.Contains("PonCheol"))
+        {
+            // Send email 
+            await _emailSender.SendEmailAsync(user.Email, user.FullName, EmailTemplateIds.UnreadMessage, templateData);
+        }
     }
 
     private async Task<UserModel> GetUser(string id)
