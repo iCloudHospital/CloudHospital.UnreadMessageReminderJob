@@ -1,5 +1,6 @@
 using System;
 using System.Data.SqlClient;
+using System.Linq;
 using CloudHospital.UnreadMessageReminderJob.Models;
 using CloudHospital.UnreadMessageReminderJob.Services;
 using Dapper;
@@ -36,14 +37,32 @@ public class SendUnreadMessageReminder : FunctionBase
 
         // TODO: 사용자 타입 데이터를 어떤 필드에서 확인할 수 있는지 확인 필요
         // sender == [ChManager, Manager]
+        var userType = item.Sender?.Metadata?.UserType;
+        //if (userType == SendBirdSenderUserTypes.ChManager)
+        //{
+
+        //}
+        //else if (userType == SendBirdSenderUserTypes.Manager)
+        //{
+
+        //}
+        //else
+        //{
+
+        //}
 
         // TODO: How to prepare template id and template data for sendgrid service 
 
         var member = item.Members
             .FirstOrDefault(x => string.IsNullOrWhiteSpace(x.Metadata?.UserType));
 
+        if (IsInDebug && member == null)
+        {
+            _logger.LogInformation("Member does not found.");
+        }
+
         //! find user email
-        var userId = member.UserId;
+        var userId = member?.UserId;
         var user = await GetUser(userId);
         if (user == null)
         {
@@ -64,24 +83,41 @@ public class SendUnreadMessageReminder : FunctionBase
             }
 
             // send email using sendgrid template
-            var emailMessage = item.Payload?.Message ?? "You have unread chat message. Please check your message our application.";
+            var testMessage = item.Payload?.Message ?? "You have unread chat message. Please check your message our application.";
 
             if (IsInDebug)
             {
-                emailMessage = $"Azure Functions app is working. {emailMessage}";
+                testMessage = $"Azure Functions app is working. {testMessage}";
             }
 
-            var templateData = GetSampleTemplateData(user.FullName, item.Sender.Nickname, emailMessage, item.Payload?.CreatedAt);
-            if (IsInDebug && member.Nickname.Contains("PonCheol"))
+            var templateData = GetTemplateData(user, item, testMessage);
+
+            if (templateData == null)
             {
-                // Send email 
-                await _emailSender.SendEmailAsync(user.Email, user.FullName, EmailTemplateIds.UnreadMessage, templateData);
+                _logger.LogInformation($"Not supported userType [userType={userType}]");
             }
+            else
+            {
+                if (IsInDebug && (member?.Nickname?.Contains("PonCheol") ?? false))
+                {
+                    // TEST: Send email 
+                    await _emailSender.SendEmailAsync(user.Email, user.FullName, EmailTemplateIds.UnreadMessage, templateData);
+                }
+            }
+
         }
+
     }
 
-    private async Task<UserModel> GetUser(string id)
+    private async Task<UserModel?> GetUser(string? id)
     {
+        if (string.IsNullOrWhiteSpace(id))
+        {
+            _logger.LogWarning("User id is empty.");
+
+            return null;
+        }
+
         var connectionString = Environment.GetEnvironmentVariable(Constants.AZURE_SQL_DATABASE_CONNECTION);
 
         using (var connection = new SqlConnection(connectionString))
@@ -136,6 +172,55 @@ AND A.IsHidden = 0
             From = fromName,
             Message = message,
             Created = created
+        };
+
+        return templateData;
+    }
+
+    private object? GetTemplateData(UserModel user, SendBirdGroupChannelMessageSendEventModel item, string? message = null) => item?.Sender?.Metadata?.UserType switch
+    {
+        SendBirdSenderUserTypes.ChManager => GetChManagerTemplateData(user, item, message),
+        SendBirdSenderUserTypes.Manager => GetManagerTemplateData(user, item, message),
+        _ => null,
+    };
+
+
+    /// <summary>
+    /// ChManager
+    /// </summary>
+    /// <param name="user"></param>
+    /// <param name="item"></param>
+    /// <param name="message"></param>
+    /// <returns></returns>
+    private object GetChManagerTemplateData(UserModel user, SendBirdGroupChannelMessageSendEventModel item, string? message = null)
+    {
+        var templateData = new
+        {
+            To = user.FullName,
+            From = item.Sender.Nickname,
+            Message = message ?? item.Payload.Message,
+            Created = item.Payload?.CreatedAt,
+        };
+
+        return templateData;
+    }
+
+    /// <summary>
+    /// Manager 
+    /// </summary>
+    /// <param name="user"></param>
+    /// <param name="item"></param>
+    /// <param name="message"></param>
+    /// <returns></returns>
+    private object GetManagerTemplateData(UserModel user, SendBirdGroupChannelMessageSendEventModel item, string? message = null)
+    {
+        // Manager
+        var templateData = new
+        {
+            To = user.FullName,
+            From = item.Sender.Nickname,
+            Message = message ?? item.Payload.Message,
+            Created = item.Payload?.CreatedAt,
         };
 
         return templateData;
