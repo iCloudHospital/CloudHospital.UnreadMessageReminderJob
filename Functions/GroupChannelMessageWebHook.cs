@@ -1,4 +1,6 @@
 ﻿using System.Net;
+using System.Security.Cryptography;
+using System.Text;
 using System.Text.Json;
 using CloudHospital.UnreadMessageReminderJob.Models;
 using Microsoft.Azure.Functions.Worker;
@@ -54,6 +56,22 @@ public class GroupChannelMessageWebHook : HttpTriggerFunctionBase
         {
             _logger.LogWarning("Payload is empty.");
             return CreateResponse(req, HttpStatusCode.BadRequest);
+        }
+
+        try
+        {
+            var verifiedRequest = VerifySendBirdSignature(req, payload);
+
+            if (!verifiedRequest)
+            {
+                throw new Exception("Unauthorized request");
+            }
+        }
+        catch (Exception ex)
+        {
+            _logger.LogWarning(ex, ex.Message);
+
+            return CreateResponse(req, HttpStatusCode.Unauthorized, ex.Message);
         }
 
         try
@@ -253,5 +271,47 @@ public class GroupChannelMessageWebHook : HttpTriggerFunctionBase
         }
 
         return response;
+    }
+
+    private bool VerifySendBirdSignature(HttpRequestData req, string payload)
+    {
+        var sendbirdApiKey = Environment.GetEnvironmentVariable(Constants.ENV_SENDBIRD_API_KEY);
+
+        if (string.IsNullOrWhiteSpace(sendbirdApiKey))
+        {
+            throw new ArgumentException("Api key is not configured");
+        }
+
+        if (req.Headers == null || !req.Headers.Contains(Constants.REQUEST_HEAD_SENDBIRD_SIGNATURE))
+        {
+            throw new ArgumentException("x-signature header does not exists");
+        }
+
+        var values = Enumerable.Empty<string>();
+
+        if (!req.Headers.TryGetValues(Constants.REQUEST_HEAD_SENDBIRD_SIGNATURE, out values))
+        {
+            throw new ArgumentException("x-signature header does not have the value. E001");
+        }
+
+        var signature = values.FirstOrDefault();
+
+        if (string.IsNullOrWhiteSpace(signature))
+        {
+            throw new ArgumentException("x-signature header does not have the value. E002");
+        }
+
+
+        byte[] signatureRawData = Encoding.UTF8.GetBytes(payload);
+        var keyBinaries = Encoding.UTF8.GetBytes(sendbirdApiKey);
+        var hashedString = string.Empty;
+
+        using (var hmac = new HMACSHA256(keyBinaries))
+        {
+            var hashedValue = hmac.ComputeHash(signatureRawData);
+            hashedString = Convert.ToBase64String(hashedValue);
+        }
+
+        return signature.Equals(hashedString, StringComparison.Ordinal);
     }
 }
