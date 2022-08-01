@@ -49,7 +49,7 @@ public class SendUnreadMessageReminder : FunctionBase
         {
             if (IsInDebug)
             {
-                _logger.LogWarning("User does not find");
+                _logger.LogWarning("User does not find.");
             }
         }
         else
@@ -62,22 +62,21 @@ public class SendUnreadMessageReminder : FunctionBase
 {nameof(UserModel.FullName)}={user.FullName}
 ");
             }
-        }
 
-        // user = new UserModel
-        // {
-        //     Id = Guid.NewGuid().ToString(),
-        //     Email = "",
-        //     FirstName = "",
-        //     LastName = "",
-        // };
+            // send email using sendgrid template
+            var emailMessage = item.Payload?.Message ?? "You have unread chat message. Please check your message our application.";
 
-        // send email using sendgrid template
-        var templateData = GetSampleTemplateData(user.FullName, item.Sender.Nickname, item.Payload.Message, item.Payload.CreatedAt);
-        if (IsInDebug && member.Nickname.Contains("PonCheol"))
-        {
-            // Send email 
-            await _emailSender.SendEmailAsync(user.Email, user.FullName, EmailTemplateIds.UnreadMessage, templateData);
+            if (IsInDebug)
+            {
+                emailMessage = $"Azure Functions app is working. {emailMessage}";
+            }
+
+            var templateData = GetSampleTemplateData(user.FullName, item.Sender.Nickname, emailMessage, item.Payload?.CreatedAt);
+            if (IsInDebug && member.Nickname.Contains("PonCheol"))
+            {
+                // Send email 
+                await _emailSender.SendEmailAsync(user.Email, user.FullName, EmailTemplateIds.UnreadMessage, templateData);
+            }
         }
     }
 
