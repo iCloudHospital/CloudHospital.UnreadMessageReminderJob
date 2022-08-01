@@ -1,10 +1,9 @@
 using System;
 using System.Data.SqlClient;
-using System.Xml.Linq;
+using System.Linq;
 using CloudHospital.UnreadMessageReminderJob.Models;
 using CloudHospital.UnreadMessageReminderJob.Services;
 using Dapper;
-using Google.Protobuf;
 using Microsoft.Azure.Functions.Worker;
 using Microsoft.Extensions.Logging;
 
