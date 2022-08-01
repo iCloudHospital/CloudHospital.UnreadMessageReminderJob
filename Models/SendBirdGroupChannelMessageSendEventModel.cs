@@ -217,3 +217,8 @@ public abstract class SendBirdGroupChannelEventModelBase
     [JsonPropertyName("app_id")]
     public string AppId { get; set; } = string.Empty;
 }
+
+public class SendBirdGroupChannelEventModel : SendBirdGroupChannelEventModelBase
+{
+
+}
