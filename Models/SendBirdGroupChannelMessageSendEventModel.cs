@@ -148,6 +148,8 @@ public class SendBirdGroupChannelModel
 public class MetadataModel
 {
     public string? Unknown { get; set; }
+
+    public string? UserType { get; set; }
 }
 
 /// <summary>
@@ -186,8 +188,6 @@ public class SendBirdChannelMemberStates
     public const string Invited = "invited";
 }
 
-
-
 public class SendBirdGroupChannelReadUpdateModel
 {
     [JsonPropertyName("user_id")]
@@ -205,6 +205,12 @@ public class SendBirdGroupChannelEventCategories
 {
     public const string MessageSend = "group_channel:message_send";
     public const string MessageRead = "group_channel:message_read";
+}
+
+public class SendBirdSenderUserTypes
+{
+    public const string ChManager = "CHManager";
+    public const string Manager = "Manager";
 }
 
 public abstract class SendBirdGroupChannelEventModelBase
