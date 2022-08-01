@@ -1,4 +1,5 @@
-﻿using System.Net;
+﻿using System.IO;
+using System.Net;
 using System.Security.Cryptography;
 using System.Text;
 using System.Text.Json;
@@ -44,15 +45,30 @@ public class GroupChannelMessageWebHook : HttpTriggerFunctionBase
             return CreateResponse(req, HttpStatusCode.BadRequest);
         }
 
-        req.Body.Position = 0;
 
-        using (var reader = new StreamReader(req.Body))
+        byte[] payloadBinary = null;
+        using (var memoryStream = new MemoryStream())
         {
-            payload = await reader.ReadToEndAsync();
-            reader.Close();
+            req.Body.Position = 0;
+            await req.Body.CopyToAsync(memoryStream);
+            await req.Body.FlushAsync();
+
+            payloadBinary = memoryStream.ToArray();
+
+            memoryStream.Position = 0;
+            using (var reader = new StreamReader(memoryStream))
+            {
+                payload = await reader.ReadToEndAsync();
+                reader.Close();
+            }
         }
 
-        if (string.IsNullOrWhiteSpace(payload))
+        if (IsInDebug)
+        {
+            _logger.LogInformation($"Payload: {payload}");
+        }
+
+        if (string.IsNullOrWhiteSpace(payload) || payloadBinary == null || payloadBinary.Length == 0)
         {
             _logger.LogWarning("Payload is empty.");
             return CreateResponse(req, HttpStatusCode.BadRequest);
@@ -60,7 +76,7 @@ public class GroupChannelMessageWebHook : HttpTriggerFunctionBase
 
         try
         {
-            var verifiedRequest = VerifySendBirdSignature(req, payload);
+            var verifiedRequest = VerifySendBirdSignature(req, payloadBinary, IsInDebug);
 
             if (!verifiedRequest)
             {
@@ -92,7 +108,7 @@ public class GroupChannelMessageWebHook : HttpTriggerFunctionBase
 
         if (IsInDebug)
         {
-            _logger.LogInformation($"Payload #1: {payload}");
+            //_logger.LogInformation($"Payload #1: {payload}");
             // _logger.LogInformation($"Payload #2: {JsonSerializer.Serialize(model, _jsonSerializerOptions)}");
             // _logger.LogInformation($"GroupId: {model.GroupId}");
         }
@@ -273,17 +289,25 @@ public class GroupChannelMessageWebHook : HttpTriggerFunctionBase
         return response;
     }
 
-    private bool VerifySendBirdSignature(HttpRequestData req, string payload)
+    private bool VerifySendBirdSignature(HttpRequestData req, byte[] signatureRawData, bool isInDebug = false)
     {
         var sendbirdApiKey = Environment.GetEnvironmentVariable(Constants.ENV_SENDBIRD_API_KEY);
 
         if (string.IsNullOrWhiteSpace(sendbirdApiKey))
         {
+            if (isInDebug)
+            {
+                _logger.LogWarning("Api key is not configured");
+            }
             throw new ArgumentException("Api key is not configured");
         }
 
         if (req.Headers == null || !req.Headers.Contains(Constants.REQUEST_HEAD_SENDBIRD_SIGNATURE))
         {
+            if (isInDebug)
+            {
+                _logger.LogWarning("x-signature header does not exists");
+            }
             throw new ArgumentException("x-signature header does not exists");
         }
 
@@ -291,6 +315,10 @@ public class GroupChannelMessageWebHook : HttpTriggerFunctionBase
 
         if (!req.Headers.TryGetValues(Constants.REQUEST_HEAD_SENDBIRD_SIGNATURE, out values))
         {
+            if (isInDebug)
+            {
+                _logger.LogWarning("x-signature header does not have the value. E001");
+            }
             throw new ArgumentException("x-signature header does not have the value. E001");
         }
 
@@ -298,11 +326,14 @@ public class GroupChannelMessageWebHook : HttpTriggerFunctionBase
 
         if (string.IsNullOrWhiteSpace(signature))
         {
+            if (isInDebug)
+            {
+                _logger.LogWarning("x-signature header does not have the value. E002");
+            }
             throw new ArgumentException("x-signature header does not have the value. E002");
         }
 
-
-        byte[] signatureRawData = Encoding.UTF8.GetBytes(payload);
+        //byte[] signatureRawData = Encoding.UTF8.GetBytes(payload);
         var keyBinaries = Encoding.UTF8.GetBytes(sendbirdApiKey);
         var hashedString = string.Empty;
 
@@ -312,6 +343,18 @@ public class GroupChannelMessageWebHook : HttpTriggerFunctionBase
             hashedString = Convert.ToBase64String(hashedValue);
         }
 
-        return signature.Equals(hashedString, StringComparison.Ordinal);
+        var authorizedRequest = signature.Equals(hashedString, StringComparison.Ordinal);
+
+        if (isInDebug)
+        {
+            _logger.LogInformation(@$"Verification:
+Header value: {signature}
+Hashed value: {hashedString}
+");
+            _logger.LogInformation($"Request is authorized: {authorizedRequest}");
+        }
+
+        return authorizedRequest;
     }
 }
+
