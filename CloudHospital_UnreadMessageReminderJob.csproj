@@ -31,4 +31,8 @@
   <ItemGroup>
     <Using Include="System.Threading.ExecutionContext" Alias="ExecutionContext" />
   </ItemGroup>
+  <ItemGroup>
+    <Compile Remove="Functions\GroupChannelMessageReadWebHook.cs" />
+    <Compile Remove="Functions\GroupChannelMessageSendWebHook.cs" />
+  </ItemGroup>
 </Project>
