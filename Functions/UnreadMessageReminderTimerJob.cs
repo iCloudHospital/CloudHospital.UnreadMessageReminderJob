@@ -7,24 +7,24 @@ using Microsoft.Extensions.Options;
 
 namespace CloudHospital.UnreadMessageReminderJob;
 
-public class TimerJob : FunctionBase
+public class UnreadMessageReminderTimerJob : FunctionBase
 {
     private readonly JsonSerializerOptions _jsonSerializerOptions;
 
     private readonly ILogger _logger;
 
-    public TimerJob(
+    public UnreadMessageReminderTimerJob(
         IOptionsMonitor<JsonSerializerOptions> jsonSerializerOptionsAccessor,
         ILoggerFactory loggerFactory)
         : base()
     {
         _jsonSerializerOptions = jsonSerializerOptionsAccessor.CurrentValue;
-        _logger = loggerFactory.CreateLogger<TimerJob>();
+        _logger = loggerFactory.CreateLogger<UnreadMessageReminderTimerJob>();
     }
 
-    [Function("TimerJob")]
+    [Function(Constants.UNREAD_MESSAGE_REMINDER_TIMER_TRIGGER)]
     public async Task<QueueResponse<SendBirdGroupChannelMessageSendEventModel>> Run(
-        [TimerTrigger("%TimerSchedule%")]
+        [TimerTrigger(Constants.UNREAD_MESSAGE_REMINDER_TIMER_SCHEDULE)]
         MyInfo myTimer)
     {
         _logger.LogInformation($"⚡️ Timer trigger function executed at: {DateTime.UtcNow:yyyy-MM-ddTHH:mm:ssZ}");
@@ -51,7 +51,7 @@ public class TimerJob : FunctionBase
         if (IsInDebug)
         {
             _logger.LogInformation(@$"🔨 Timer trigger information:
-Timer schedule         : {Environment.GetEnvironmentVariable(Constants.ENV_TIMER_SCHEDULE)}        
+Timer schedule         : {Environment.GetEnvironmentVariable(Constants.ENV_UNREAD_MESSAGE_REMINDER_TIMER_SCHEDULE)}        
 Table                  : {(tableClient.Name == GetTableName() ? "✅ Ready" : "❌ Table is not READY")}
 Queue                  : {(queueClient.Name == GetQueueName() ? "✅ Ready" : "❌ Queue is not READY")}
 Unread delayed minutes : {unreadDelayMinutesValue} MIN
@@ -117,7 +117,7 @@ Unread delayed minutes : {unreadDelayMinutesValue} MIN
 /// <typeparam name="T"></typeparam>
 public class QueueResponse<T>
 {
-    [QueueOutput("%QueueName%%Stage%", Connection = Constants.AZURE_STORAGE_ACCOUNT_CONNECTION)]
+    [QueueOutput(Constants.UNREAD_MESSAGE_REMINDER_QUEUE_NAME, Connection = Constants.AZURE_STORAGE_ACCOUNT_CONNECTION)]
     public List<T> Items { get; set; } = new List<T>();
 }
 

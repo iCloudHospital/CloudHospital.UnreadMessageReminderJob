@@ -28,7 +28,7 @@ public abstract class FunctionBase
     protected string GetTableName()
     {
         var stage = Environment.GetEnvironmentVariable(Constants.ENV_STAGE);
-        var tableName = Environment.GetEnvironmentVariable(Constants.ENV_TABLE_NAME);
+        var tableName = Environment.GetEnvironmentVariable(Constants.ENV_UNREAD_MESSAGE_REMINDER_TABLE_NAME);
 
         var tableNameActural = $"{tableName}{stage}";
 
@@ -50,7 +50,7 @@ public abstract class FunctionBase
     protected string GetQueueName()
     {
         var stage = Environment.GetEnvironmentVariable(Constants.ENV_STAGE);
-        var queueName = Environment.GetEnvironmentVariable(Constants.ENV_QUEUE_NAME);
+        var queueName = Environment.GetEnvironmentVariable(Constants.ENV_UNREAD_MESSAGE_REMINDER_QUEUE_NAME);
         var queueNameActural = $"{queueName}{stage}";
 
         return queueNameActural;

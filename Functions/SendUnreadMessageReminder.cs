@@ -23,9 +23,9 @@ public class SendUnreadMessageReminder : FunctionBase
         _logger = loggerFactory.CreateLogger<SendUnreadMessageReminder>();
     }
 
-    [Function("SendUnreadMessageReminder")]
+    [Function(Constants.UNREAD_MESSAGE_REMINDER_QUEUE_TRIGGER)]
     public async Task Run(
-        [QueueTrigger("%QueueName%%Stage%", Connection = Constants.AZURE_STORAGE_ACCOUNT_CONNECTION)]
+        [QueueTrigger(Constants.UNREAD_MESSAGE_REMINDER_QUEUE_NAME, Connection = Constants.AZURE_STORAGE_ACCOUNT_CONNECTION)]
             SendBirdGroupChannelMessageSendEventModel item)
     {
         _logger.LogInformation($"⚡️ Dequeue item: {nameof(SendBirdGroupChannelMessageSendEventModel.Channel.ChannelUrl)}={item.Channel.ChannelUrl} {nameof(SendBirdGroupChannelMessageSendEventModel.Payload.MessageId)}={item.Payload.MessageId}");

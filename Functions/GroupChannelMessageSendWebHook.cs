@@ -26,7 +26,7 @@ public class GroupChannelMessageSendWebHook : HttpTriggerFunctionBase
         _logger = loggerFactory.CreateLogger<GroupChannelMessageSendWebHook>();
     }
 
-    [Function("GroupChannelMessageSendWebHook")]
+    // [Function("GroupChannelMessageSendWebHook")]
     public async Task<HttpResponseData> Run(
         [HttpTrigger(AuthorizationLevel.Function, "post")]
         HttpRequestData req)
