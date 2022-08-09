@@ -25,11 +25,11 @@ public class EventTableModel : ITableEntity
     /// </summary>
     public string Json { get; set; } = string.Empty;
 
-    public DateTime Created { get; set; } = DateTime.UtcNow;
-
     /// <summary>
     /// Created at
     /// </summary>
+    public DateTime Created { get; set; } = DateTime.UtcNow;
+
     public DateTimeOffset? Timestamp { get; set; }
 
     public ETag ETag { get; set; }

@@ -12,9 +12,9 @@ public abstract class FunctionBase
 
     protected bool IsInDebug => isInDebug;
 
-    protected async Task<TableClient> GetTableClient()
+    protected async Task<TableClient> GetTableClient(string tableName)
     {
-        var tableName = GetTableName();
+        // var tableName = GetTableName();
 
         var storageAccountConnectionString = Environment.GetEnvironmentVariable(Constants.AZURE_STORAGE_ACCOUNT_CONNECTION);
 
@@ -25,7 +25,7 @@ public abstract class FunctionBase
         return tableClient;
     }
 
-    protected string GetTableName()
+    protected string GetTableNameForUnreadMessageReminder()
     {
         var stage = Environment.GetEnvironmentVariable(Constants.ENV_STAGE);
         var tableName = Environment.GetEnvironmentVariable(Constants.ENV_UNREAD_MESSAGE_REMINDER_TABLE_NAME);
@@ -35,9 +35,19 @@ public abstract class FunctionBase
         return tableNameActural;
     }
 
-    protected async Task<QueueClient> GetQueueClient()
+    protected string GetTableNameForOpenedConsultationUpdate()
     {
-        var queueName = GetQueueName();
+        var stage = Environment.GetEnvironmentVariable(Constants.ENV_STAGE);
+        var tableName = Environment.GetEnvironmentVariable(Constants.ENV_OPENED_CONSULTATION_UPDATE_TABLE_NAME);
+
+        var tableNameActural = $"{tableName}{stage}";
+
+        return tableNameActural;
+    }
+
+    protected async Task<QueueClient> GetQueueClient(string queueName)
+    {
+        // var queueName = GetQueueName();
 
         var storageAccountConnectionString = Environment.GetEnvironmentVariable(Constants.AZURE_STORAGE_ACCOUNT_CONNECTION);
 
@@ -47,10 +57,19 @@ public abstract class FunctionBase
         return queueClient;
     }
 
-    protected string GetQueueName()
+    protected string GetQueueNameForUnreadMessageRemider()
     {
         var stage = Environment.GetEnvironmentVariable(Constants.ENV_STAGE);
         var queueName = Environment.GetEnvironmentVariable(Constants.ENV_UNREAD_MESSAGE_REMINDER_QUEUE_NAME);
+        var queueNameActural = $"{queueName}{stage}";
+
+        return queueNameActural;
+    }
+
+    protected string GetQueueNameForOpenedConsultationUpdate()
+    {
+        var stage = Environment.GetEnvironmentVariable(Constants.ENV_STAGE);
+        var queueName = Environment.GetEnvironmentVariable(Constants.ENV_OPENED_CONSULTATION_UPDATE_QUEUE_NAME);
         var queueNameActural = $"{queueName}{stage}";
 
         return queueNameActural;

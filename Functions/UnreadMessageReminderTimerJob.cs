@@ -44,16 +44,18 @@ public class UnreadMessageReminderTimerJob : FunctionBase
         var result = new QueueResponse<SendBirdGroupChannelMessageSendEventModel>();
 
         // Make sure to exists table in table storage
-        var tableClient = await GetTableClient();
+        var tableName = GetTableNameForUnreadMessageReminder();
+        var tableClient = await GetTableClient(tableName);
         // Make sure exists queue in queue storage
-        var queueClient = await GetQueueClient();
+        var queueName = GetQueueNameForUnreadMessageRemider();
+        var queueClient = await GetQueueClient(queueName);
 
         if (IsInDebug)
         {
             _logger.LogInformation(@$"🔨 Timer trigger information:
 Timer schedule         : {Environment.GetEnvironmentVariable(Constants.ENV_UNREAD_MESSAGE_REMINDER_TIMER_SCHEDULE)}        
-Table                  : {(tableClient.Name == GetTableName() ? "✅ Ready" : "❌ Table is not READY")}
-Queue                  : {(queueClient.Name == GetQueueName() ? "✅ Ready" : "❌ Queue is not READY")}
+Table                  : {(tableClient.Name == GetTableNameForUnreadMessageReminder() ? "✅ Ready" : "❌ Table is not READY")}
+Queue                  : {(queueClient.Name == GetQueueNameForUnreadMessageRemider() ? "✅ Ready" : "❌ Queue is not READY")}
 Unread delayed minutes : {unreadDelayMinutesValue} MIN
         ");
         }

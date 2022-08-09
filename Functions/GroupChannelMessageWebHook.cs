@@ -180,8 +180,8 @@ public class GroupChannelMessageWebHook : HttpTriggerFunctionBase
         // SendBirdGroupChannelMessageSendEventModel.Sender 에 따라 처리할 내용이 다릅니다.
         // TODO: 사용자 타입 데이터를 어떤 필드에서 확인할 수 있는지 확인 필요
         // When Reader == User
-
-        var tableClient = await GetTableClient();
+        var tableName = GetTableNameForUnreadMessageReminder();
+        var tableClient = await GetTableClient(tableName);
 
         var queryResult = tableClient.QueryAsync<EventTableModel>(filter: $"{nameof(EventTableModel.PartitionKey)} eq '{model.Channel.ChannelUrl}'").AsPages();
 
@@ -269,8 +269,8 @@ public class GroupChannelMessageWebHook : HttpTriggerFunctionBase
         // SendBirdGroupChannelMessageSendEventModel.Sender 에 따라 처리할 내용이 다릅니다.
         // TODO: 사용자 타입 데이터를 어떤 필드에서 확인할 수 있는지 확인 필요
         // When sender: one of [ChManager, Manager]
-
-        var tableClient = await GetTableClient();
+        var tableName = GetTableNameForUnreadMessageReminder();
+        var tableClient = await GetTableClient(tableName);
 
         var queryResult = tableClient.QueryAsync<EventTableModel>(filter: $"{nameof(EventTableModel.PartitionKey)} eq '{model.Channel.ChannelUrl}'").AsPages();
 

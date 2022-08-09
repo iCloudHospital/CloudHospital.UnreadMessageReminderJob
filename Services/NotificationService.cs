@@ -25,7 +25,7 @@ public class NotificationService
         )
     {
         _notificationApiConfiguration = notificationApiConfiguration.Value ?? new NotificationApiConfiguration();
-        _httpClient = httpClientFactory.CreateClient("notification");
+        _httpClient = httpClientFactory.CreateClient(Constants.HTTP_CLIENT_NOTIFICATION_API);
         _notificationHubClient = NotificationHubClient.CreateClientFromConnectionString(azureNotificationHubsConfiguration.Value.AccessSignature, azureNotificationHubsConfiguration.Value.HubName);
         _logger = logger;
     }
@@ -128,7 +128,7 @@ AND device.UserId       = @UserId
 
     protected async Task<PushNotificationTemplate> GetTemplateDataByNotificationId(string notificationId, CancellationToken cancellationToken = default)
     {
-        // TODO: Query notifications
+        // Query notifications
         // var notification = await _context.Notifications
         //     .Include(x => x.Sender)
         //     .Include(x => x.Receiver)
