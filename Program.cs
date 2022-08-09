@@ -1,6 +1,7 @@
 using System.Text.Json;
 using CloudHospital.UnreadMessageReminderJob;
 using CloudHospital.UnreadMessageReminderJob.Converters;
+using CloudHospital.UnreadMessageReminderJob.Options;
 using CloudHospital.UnreadMessageReminderJob.Services;
 using Microsoft.Extensions.Configuration;
 using Microsoft.Extensions.DependencyInjection;
@@ -10,6 +11,19 @@ var host = new HostBuilder()
     .ConfigureFunctionsWorkerDefaults()
     .ConfigureServices(services =>
     {
+        services.AddOptions<DatabaseConfiguration>()
+        .Configure(options =>
+        {
+            var connectionString = Environment.GetEnvironmentVariable(Constants.AZURE_SQL_DATABASE_CONNECTION);
+
+            if (string.IsNullOrWhiteSpace(connectionString))
+            {
+                throw new ArgumentException("Database connection string does not configure. Please check application settings.");
+            }
+
+            options.ConnectionString = connectionString;
+        });
+
         services
             .AddOptions<JsonSerializerOptions>()
             .Configure(options =>
