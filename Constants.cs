@@ -29,4 +29,6 @@ public class Constants
     public const string UNREAD_MESSAGE_REMINDER_HTTP_TRIGGER = "GroupChannelMessageWebHook";
     public const string UNREAD_MESSAGE_REMINDER_TIMER_TRIGGER = "UnreadMessageReminderTimerJob";
     public const string UNREAD_MESSAGE_REMINDER_QUEUE_TRIGGER = "UnreadMessageReminderSendMessage";
+
+    public const string OPENED_CONSULTATION_UPDATE_HTTP_TRIGGER = "OpendConsultationUpdatedWebHook";
 }
