@@ -8,22 +8,22 @@ using Microsoft.Extensions.Options;
 
 namespace CloudHospital.UnreadMessageReminderJob;
 
-public class OpenedConsultationUpdatedWebhook : HttpTriggerFunctionBase
+public class CallingReminderConsultationUpdatedWebhook : HttpTriggerFunctionBase
 {
-    public OpenedConsultationUpdatedWebhook(
+    public CallingReminderConsultationUpdatedWebhook(
         IOptionsMonitor<JsonSerializerOptions> jsonSerializerOptionsAccessor,
         ILoggerFactory loggerFactory)
     {
         _jsonSerializerOptions = jsonSerializerOptionsAccessor.CurrentValue;
-        _logger = loggerFactory.CreateLogger<OpenedConsultationUpdatedWebhook>();
+        _logger = loggerFactory.CreateLogger<CallingReminderConsultationUpdatedWebhook>();
     }
 
-    [Function(Constants.OPENED_CONSULTATION_UPDATE_HTTP_TRIGGER)]
+    [Function(Constants.CALLING_REMINDER_HTTP_TRIGGER)]
     public async Task<HttpResponseData> Run(
             [HttpTrigger(AuthorizationLevel.Function, "post")]
             HttpRequestData req)
     {
-        _logger.LogInformation($"⚡️ [{nameof(OpenedConsultationUpdatedWebhook)}] HTTP trigger function processed a request.");
+        _logger.LogInformation($"⚡️ [{nameof(CallingReminderConsultationUpdatedWebhook)}] HTTP trigger function processed a request.");
 
         var response = CreateResponse(req, HttpStatusCode.OK);
 
@@ -71,25 +71,25 @@ public class OpenedConsultationUpdatedWebhook : HttpTriggerFunctionBase
             return CreateResponse(req, HttpStatusCode.BadRequest);
         }
 
-        var tableName = GetTableNameForOpenedConsultationUpdate();
+        var tableName = GetTableNameForCallingReminder();
         var tableClient = await GetTableClient(tableName);
 
-        var queueName = GetQueueNameForOpenedConsultationUpdate();
+        var queueName = GetQueueNameForCallingReminder();
         var queueClient = await GetQueueClient(queueName);
 
         if (IsInDebug)
         {
-            var openedConsultationUpdateReminderBasis = Environment.GetEnvironmentVariable(Constants.ENV_OPENED_CONSULTATION_UPDATE_REMIDER_BASIS);
-            if (!int.TryParse(openedConsultationUpdateReminderBasis, out int openedConsultationUpdateReminderBasisValue))
+            var callingReminderBasis = Environment.GetEnvironmentVariable(Constants.ENV_CALLING_REMINDER_BASIS);
+            if (!int.TryParse(callingReminderBasis, out int callingReminderBasisValue))
             {
-                openedConsultationUpdateReminderBasisValue = 30;
+                callingReminderBasisValue = 30;
             }
 
-            _logger.LogInformation(@$"🔨 {nameof(OpenedConsultationUpdatedWebhook)} information:
+            _logger.LogInformation(@$"🔨 {nameof(CallingReminderConsultationUpdatedWebhook)} information:
 Timer schedule         : {Environment.GetEnvironmentVariable(Constants.ENV_UNREAD_MESSAGE_REMINDER_TIMER_SCHEDULE)}        
 Table                  : {(tableClient.Name == GetTableNameForUnreadMessageReminder() ? "✅ Ready" : "❌ Table is not READY")}
 Queue                  : {(queueClient.Name == GetQueueNameForUnreadMessageRemider() ? "✅ Ready" : "❌ Queue is not READY")}
-Unread delayed minutes : {openedConsultationUpdateReminderBasisValue} MIN
+Unread delayed minutes : {callingReminderBasisValue} MIN
         ");
         }
 

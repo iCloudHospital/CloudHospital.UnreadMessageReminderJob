@@ -35,10 +35,10 @@ public abstract class FunctionBase
         return tableNameActural;
     }
 
-    protected string GetTableNameForOpenedConsultationUpdate()
+    protected string GetTableNameForCallingReminder()
     {
         var stage = Environment.GetEnvironmentVariable(Constants.ENV_STAGE);
-        var tableName = Environment.GetEnvironmentVariable(Constants.ENV_OPENED_CONSULTATION_UPDATE_TABLE_NAME);
+        var tableName = Environment.GetEnvironmentVariable(Constants.ENV_CALLING_REMINDER_TABLE_NAME);
 
         var tableNameActural = $"{tableName}{stage}";
 
@@ -66,10 +66,10 @@ public abstract class FunctionBase
         return queueNameActural;
     }
 
-    protected string GetQueueNameForOpenedConsultationUpdate()
+    protected string GetQueueNameForCallingReminder()
     {
         var stage = Environment.GetEnvironmentVariable(Constants.ENV_STAGE);
-        var queueName = Environment.GetEnvironmentVariable(Constants.ENV_OPENED_CONSULTATION_UPDATE_QUEUE_NAME);
+        var queueName = Environment.GetEnvironmentVariable(Constants.ENV_CALLING_REMINDER_QUEUE_NAME);
         var queueNameActural = $"{queueName}{stage}";
 
         return queueNameActural;

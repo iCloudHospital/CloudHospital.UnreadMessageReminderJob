@@ -12,18 +12,16 @@ public class Constants
     public const string ENV_UNREAD_MESSAGE_REMINDER_TIMER_SCHEDULE = "UnreadMessageReminderTimerSchedule";
     public const string ENV_UNREAD_DELAY_MINUTES = "UnreadDelayMinutes";
 
-    public const string ENV_OPENED_CONSULTATION_UPDATE_TABLE_NAME = "OpenedConsultationUpdateTableName";
-    public const string ENV_OPENED_CONSULTATION_UPDATE_QUEUE_NAME = "OpenedConsultationUpdateQueueName";
-    public const string ENV_OPENED_CONSULTATION_UPDATE_TIMER_SCHEDULE = "OpenedConsultationUpdateTimerSchedule";
-
-    public const string ENV_OPENED_CONSULTATION_UPDATE_REMIDER_BASIS = "ConsultationReminderBasis";
+    public const string ENV_CALLING_REMINDER_TABLE_NAME = "CallingReminderTableName";
+    public const string ENV_CALLING_REMINDER_QUEUE_NAME = "CallingReminderQueueName";
+    public const string ENV_CALLING_REMINDER_TIMER_SCHEDULE = "CallingReminderTimerSchedule";
+    public const string ENV_CALLING_REMINDER_BASIS = "CallingReminderBasis";
 
     public const string ENV_SENDBIRD_API_KEY = "SendBirdApiKey";
 
     public const string ENV_NOTIFICATION_API_OIDC_NAME = "NotificationApiOidcName";
     public const string ENV_NOTIFICATION_API_NAME = "NotificationApiName";
     public const string ENV_NOTIFICATION_API_BASE_URL = "NotificationApiBaseUrl";
-
     public const string ENV_NOTIFICATION_API_ENABLED = "NotificationApiEnabled";
 
     public const string ENV_NOTIFICATION_HUB_CONNECTION_STRING = "NotificationHubConnectionString";
@@ -37,9 +35,9 @@ public class Constants
 
     public const string AZURE_STORAGE_ACCOUNT_CONNECTION = "AzureWebJobsStorage";
 
-    // Opened consultation update
-    public const string OPENED_CONSULTATION_UPDATE_QUEUE_NAME = $"%{ENV_OPENED_CONSULTATION_UPDATE_QUEUE_NAME}%%{ENV_STAGE}%";
-    public const string OPENED_CONSULTATION_UPDATE_TIMER_SCHEDULE = $"%{ENV_OPENED_CONSULTATION_UPDATE_TIMER_SCHEDULE}%";
+    // Calling reminder
+    public const string CALLING_REMINDER_QUEUE_NAME = $"%{ENV_CALLING_REMINDER_QUEUE_NAME}%%{ENV_STAGE}%";
+    public const string CALLING_REMINDER_TIMER_SCHEDULE = $"%{ENV_CALLING_REMINDER_TIMER_SCHEDULE}%";
 
     // http clients
     public const string HTTP_CLIENT_NOTIFICATION_API = "notification";
@@ -55,5 +53,7 @@ public class Constants
     public const string UNREAD_MESSAGE_REMINDER_QUEUE_TRIGGER = "UnreadMessageReminderSendMessage";
 
 
-    public const string OPENED_CONSULTATION_UPDATE_HTTP_TRIGGER = "OpendConsultationUpdatedWebHook";
+    public const string CALLING_REMINDER_HTTP_TRIGGER = "CallingReminderConsultationUpdatedWebHook";
+    public const string CALLING_REMINDER_TIMER_TRIGGER = "CallingReminderTimerJob";
+    public const string CALLING_REMINDER_QUEUE_TRIGGER = "CallingReminderSendNotification";
 }

@@ -23,16 +23,11 @@ public class UnreadMessageReminderTimerJob : FunctionBase
     }
 
     [Function(Constants.UNREAD_MESSAGE_REMINDER_TIMER_TRIGGER)]
-    public async Task<QueueResponse<SendBirdGroupChannelMessageSendEventModel>> Run(
+    public async Task<UnreadMessageReminderQueueResponse> Run(
         [TimerTrigger(Constants.UNREAD_MESSAGE_REMINDER_TIMER_SCHEDULE)]
         MyInfo myTimer)
     {
-        _logger.LogInformation($"⚡️ Timer trigger function executed at: {DateTime.UtcNow:yyyy-MM-ddTHH:mm:ssZ}");
-        if (IsInDebug)
-        {
-            // _logger.LogInformation($"🔨 _jsonSerializerOptions: {_jsonSerializerOptions == null}");
-            // _logger.LogInformation($"🔨 Next timer schedule at: {myTimer.ScheduleStatus?.Next}");
-        }
+        _logger.LogInformation($"⚡️ {nameof(UnreadMessageReminderTimerJob)} Timer trigger function executed at: {DateTime.UtcNow:yyyy-MM-ddTHH:mm:ssZ}");
 
         var unreadDelayMinutes = Environment.GetEnvironmentVariable(Constants.ENV_UNREAD_DELAY_MINUTES);
         // int unreadDelayMinutesValue = 0;
@@ -41,7 +36,7 @@ public class UnreadMessageReminderTimerJob : FunctionBase
             unreadDelayMinutesValue = 5;
         }
 
-        var result = new QueueResponse<SendBirdGroupChannelMessageSendEventModel>();
+        var response = new UnreadMessageReminderQueueResponse();
 
         // Make sure to exists table in table storage
         var tableName = GetTableNameForUnreadMessageReminder();
@@ -52,12 +47,12 @@ public class UnreadMessageReminderTimerJob : FunctionBase
 
         if (IsInDebug)
         {
-            _logger.LogInformation(@$"🔨 Timer trigger information:
+            _logger.LogInformation(@$"🔨 {nameof(UnreadMessageReminderTimerJob)} Timer trigger information:
 Timer schedule         : {Environment.GetEnvironmentVariable(Constants.ENV_UNREAD_MESSAGE_REMINDER_TIMER_SCHEDULE)}        
 Table                  : {(tableClient.Name == GetTableNameForUnreadMessageReminder() ? "✅ Ready" : "❌ Table is not READY")}
 Queue                  : {(queueClient.Name == GetQueueNameForUnreadMessageRemider() ? "✅ Ready" : "❌ Queue is not READY")}
 Unread delayed minutes : {unreadDelayMinutesValue} MIN
-        ");
+");
         }
 
         var time = DateTime.UtcNow
@@ -71,56 +66,55 @@ Unread delayed minutes : {unreadDelayMinutesValue} MIN
             _logger.LogInformation($"🔨 filter: {filter}");
         }
 
-        var items = tableClient.QueryAsync<EventTableModel>(filter: filter).AsPages();
+        var queryResults = tableClient.QueryAsync<EventTableModel>(filter: filter).AsPages();
 
-        await foreach (var item in items)
+        await foreach (var result in queryResults)
         {
             if (IsInDebug)
             {
-                _logger.LogInformation($">> Filtered items count: {item.Values.Count}");
+                _logger.LogInformation($">> Filtered items count: {result.Values.Count}");
             }
 
-            foreach (var entry in item.Values)
+            foreach (var item in result.Values)
             {
-                var model = JsonSerializer.Deserialize<SendBirdGroupChannelMessageSendEventModel>(entry.Json, _jsonSerializerOptions);
+                var model = JsonSerializer.Deserialize<SendBirdGroupChannelMessageSendEventModel>(item.Json, _jsonSerializerOptions);
                 if (model != null)
                 {
                     // enqueue
-                    result.Items.Add(model);
+                    response.Items.Add(model);
                     if (IsInDebug)
                     {
-                        _logger.LogInformation(">> Enqueue item");
+                        _logger.LogInformation($">> Enqueue item.");
                     }
 
                     // Remove item in table 
-                    await tableClient.DeleteEntityAsync(entry.PartitionKey, entry.RowKey);
+                    await tableClient.DeleteEntityAsync(item.PartitionKey, item.RowKey);
                     if (IsInDebug)
                     {
-                        _logger.LogInformation(">> Remove item from table");
+                        _logger.LogInformation($">> Remove item from table. PartitionKey={item.PartitionKey}, RowKey={item.RowKey}");
                     }
                 }
                 else
                 {
                     if (IsInDebug)
                     {
-                        _logger.LogWarning($"Deserialization was faild. partitionkey: {entry.PartitionKey}, rowkey:{entry.RowKey}");
+                        _logger.LogWarning($"Deserialization was faild. partitionkey: {item.PartitionKey}, rowkey:{item.RowKey}");
                     }
                 }
             }
         }
 
-        return result;
+        return response;
     }
 }
 
 /// <summary>
 /// Queue output binding wrapper
 /// </summary>
-/// <typeparam name="T"></typeparam>
-public class QueueResponse<T>
+public class UnreadMessageReminderQueueResponse
 {
     [QueueOutput(Constants.UNREAD_MESSAGE_REMINDER_QUEUE_NAME, Connection = Constants.AZURE_STORAGE_ACCOUNT_CONNECTION)]
-    public List<T> Items { get; set; } = new List<T>();
+    public List<SendBirdGroupChannelMessageSendEventModel> Items { get; set; } = new();
 }
 
 public class MyInfo
