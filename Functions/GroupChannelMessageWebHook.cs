@@ -128,8 +128,6 @@ public class GroupChannelMessageWebHook : HttpTriggerFunctionBase
 
             return CreateResponse(req, HttpStatusCode.NotAcceptable);
         }
-
-        return response;
     }
 
     private async Task<HttpResponseData> ProcessGroupChannelMessageRead(HttpRequestData req, string payload)
