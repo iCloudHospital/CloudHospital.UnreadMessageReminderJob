@@ -63,12 +63,17 @@ public class CallingReminderConsultationUpdatedWebhook : HttpTriggerFunctionBase
             return CreateResponse(req, HttpStatusCode.BadRequest);
         }
 
-        var consultation = JsonSerializer.Deserialize<ConsultationModel>(payload);
+        var consultation = JsonSerializer.Deserialize<ConsultationModel>(payload, _jsonSerializerOptions);
 
         if (consultation == null)
         {
             _logger.LogWarning("Fail to parse Payload to Object.");
             return CreateResponse(req, HttpStatusCode.BadRequest);
+        }
+
+        if (IsInDebug)
+        {
+            _logger.LogInformation("consultation: Id={id},IsOpen={isOpen}", consultation.Id, consultation.IsOpen);
         }
 
         var tableName = GetTableNameForCallingReminder();
@@ -86,14 +91,14 @@ public class CallingReminderConsultationUpdatedWebhook : HttpTriggerFunctionBase
             }
 
             _logger.LogInformation(@$"🔨 {nameof(CallingReminderConsultationUpdatedWebhook)} information:
-Timer schedule         : {Environment.GetEnvironmentVariable(Constants.ENV_UNREAD_MESSAGE_REMINDER_TIMER_SCHEDULE)}        
-Table                  : {(tableClient.Name == GetTableNameForUnreadMessageReminder() ? "✅ Ready" : "❌ Table is not READY")}
-Queue                  : {(queueClient.Name == GetQueueNameForUnreadMessageRemider() ? "✅ Ready" : "❌ Queue is not READY")}
+Timer schedule         : {Environment.GetEnvironmentVariable(Constants.ENV_CALLING_REMINDER_TIMER_SCHEDULE)}        
+Table                  : {(tableClient.Name == GetTableNameForCallingReminder() ? "✅ Ready" : "❌ Table is not READY")}
+Queue                  : {(queueClient.Name == GetQueueNameForCallingReminder() ? "✅ Ready" : "❌ Queue is not READY")}
 Unread delayed minutes : {callingReminderBasisValue} MIN
         ");
         }
 
-        var filter = $"PartitionKey eq '{consultation.Id}'";
+        var filter = $"{nameof(ConsultationTableModel.PartitionKey)} eq '{consultation.Id}'";
         var queryResult = tableClient.QueryAsync<ConsultationTableModel>(filter: filter).AsPages();
 
         // If consultation is exists, remove all consultations

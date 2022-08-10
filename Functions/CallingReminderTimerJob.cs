@@ -14,7 +14,7 @@ public class CallingReminderTimerJob : FunctionBase
         : base()
     {
         _jsonSerializerOptions = jsonSerializerOptionsAccessor.CurrentValue;
-        _logger = loggerFactory.CreateLogger<UnreadMessageReminderTimerJob>();
+        _logger = loggerFactory.CreateLogger<CallingReminderTimerJob>();
     }
 
     [Function(Constants.CALLING_REMINDER_TIMER_TRIGGER)]
@@ -26,7 +26,7 @@ public class CallingReminderTimerJob : FunctionBase
         CallingReminderQueueResponse response = new();
 
         var callingReminderBasis = Environment.GetEnvironmentVariable(Constants.ENV_CALLING_REMINDER_BASIS);
-        
+
         if (!int.TryParse(callingReminderBasis, out int callingReminderBasisValue))
         {
             callingReminderBasisValue = 30;
@@ -42,17 +42,27 @@ public class CallingReminderTimerJob : FunctionBase
         if (IsInDebug)
         {
             _logger.LogInformation(@$"🔨 {nameof(CallingReminderTimerJob)} Timer trigger information:
-Timer schedule           : {Environment.GetEnvironmentVariable(Constants.ENV_UNREAD_MESSAGE_REMINDER_TIMER_SCHEDULE)}        
-Table                    : {(tableClient.Name == GetTableNameForUnreadMessageReminder() ? "✅ Ready" : "❌ Table is not READY")}
-Queue                    : {(queueClient.Name == GetQueueNameForUnreadMessageRemider() ? "✅ Ready" : "❌ Queue is not READY")}
+Timer schedule           : {Environment.GetEnvironmentVariable(Constants.ENV_CALLING_REMINDER_TIMER_SCHEDULE)}        
+Table                    : {(tableClient.Name == GetTableNameForCallingReminder() ? "✅ Ready" : "❌ Table is not READY")}
+Queue                    : {(queueClient.Name == GetQueueNameForCallingReminder() ? "✅ Ready" : "❌ Queue is not READY")}
 Calling reminder minutes : {callingReminderBasisValue} MIN
 ");
         }
 
-        var from = DateTime.UtcNow.AddMinutes(callingReminderBasisValue * -1);
-        var to = DateTime.UtcNow.AddMinutes(callingReminderBasisValue);
+        var from = DateTime.UtcNow.AddMinutes(callingReminderBasisValue * -1).ToString("yyyy-MM-ddTHH:mm:ssZ");
+        var to = DateTime.UtcNow.AddMinutes(callingReminderBasisValue).ToString("yyyy-MM-ddTHH:mm:ssZ");
 
-        var queryResult = tableClient.QueryAsync<ConsultationTableModel>(x => from <= x.ConfirmedDateStart && to >= x.ConfirmedDateStart).AsPages();
+        var filter = $"{nameof(ConsultationTableModel.ConfirmedDateStart)} ge datetime'{from}' and {nameof(ConsultationTableModel.ConfirmedDateStart)} le datetime'{to}'";
+
+        if (IsInDebug)
+        {
+            _logger.LogInformation("🔨 filter: {filter}", filter);
+        }
+
+        var queryResult = tableClient.QueryAsync<ConsultationTableModel>(
+            // x => from <= x.ConfirmedDateStart && to >= x.ConfirmedDateStart
+            filter: filter
+            ).AsPages();
 
         await foreach (var result in queryResult)
         {
@@ -60,7 +70,7 @@ Calling reminder minutes : {callingReminderBasisValue} MIN
             {
                 if (!string.IsNullOrWhiteSpace(item.Json))
                 {
-                    var consultation = JsonSerializer.Deserialize<ConsultationModel>(item.Json);
+                    var consultation = JsonSerializer.Deserialize<ConsultationModel>(item.Json, _jsonSerializerOptions);
                     if (consultation != null)
                     {
                         // enqueue

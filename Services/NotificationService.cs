@@ -52,7 +52,16 @@ public class NotificationService
                 var tags = new List<string> { "$userId:{" + deviceGroup.Key.UserId + "}" };
                 tags.Add(string.Format("AppAlert && {0}", NotificationType.EventAlert.ToString()));
 
-                await SendPushNotificationAsync(tags, deviceGroup.Key.Platform, title, notification.Message, templateData, cancellationToken);
+                // TODO: TEST
+                // await SendPushNotificationAsync(tags, deviceGroup.Key.Platform, title, notification.Message, templateData, cancellationToken);
+                _logger.LogInformation("Request push notification. {@notification}", new
+                {
+                    Tags = tags,
+                    PlatForm = deviceGroup.Key.Platform,
+                    Title = title,
+                    Message = notification.Message,
+                    TemplateData = templateData,
+                });
             }
 
             await SendNotificationAsync(notification);
@@ -73,17 +82,20 @@ public class NotificationService
         var connectionString = Environment.GetEnvironmentVariable(Constants.AZURE_SQL_DATABASE_CONNECTION);
         var query = @"
 SELECT
-    notification.Id,
+    CONVERT(nchar(36), notification.Id) as Id,
     notification.NotificationCode,
-    notification.NotificationTargetId,
-    notification.SenderId,
-    notification.ReceiverId,
+    CONVERT(nchar(36), notification.NotificationTargetId) as NotificationTargetId,
+    
     notification.Message,
     notification.CreatedAt,
     notification.IsChecked,
+    
+    notification.SenderId,
     sender.FirstName,
     sender.LastName,
     sender.Email,
+
+    notification.ReceiverId,
     receiver.FirstName,
     receiver.LastName,
     receiver.Email
@@ -105,14 +117,21 @@ WHERE
         {
             var notifications = await connection
                 .QueryAsync<NotificationModel, UserModel, UserModel, NotificationModel>(
-                    query,
-                    (notification, sender, receiver) =>
+                    sql: query,
+                    map: (notification, sender, receiver) =>
                     {
-                        notification.Sender = sender;
-                        notification.Receiver = receiver;
+                        if (sender != null)
+                        {
+                            notification.Sender = sender;
+                        }
+                        if (receiver != null)
+                        {
+                            notification.Receiver = receiver;
+                        }
 
                         return notification;
-                    }, new { Id = notificationId },
+                    },
+                    param: new { Id = notificationId },
                     splitOn: "Id, SenderId, ReceiverId");
 
             notification = notifications?.FirstOrDefault();
@@ -277,7 +296,7 @@ VALUES
             affected = await connection.ExecuteAsync(queryInsertNotification, new
             {
                 Id = notification.Id,
-                NotificationCode = notification.NotificationCode,
+                NotificationCode = (int)notification.NotificationCode,
                 NotificationTargetId = notification.NotificationTargetId,
                 SenderId = notification.SenderId,
                 ReceiverId = notification.ReceiverId,
@@ -287,6 +306,8 @@ VALUES
                 IsDeleted = notification.IsDeleted,
             });
         }
+
+        _logger.LogInformation("🔨 Notification inserted. affected={affected}", affected);
 
         return affected;
     }
@@ -314,10 +335,12 @@ AND auditable.IsHidden  = 0
 AND device.UserId       = @UserId
 ";
 
-
         using (var connection = new SqlConnection(_databaseConfiguration.ConnectionString))
         {
             var result = await connection.QueryAsync<DeviceModel>(queryDevices, new { UserId = receiverId });
+
+            _logger.LogInformation("🔨 devices query result={count}", result.Count());
+
             return result.ToList();
         }
     }

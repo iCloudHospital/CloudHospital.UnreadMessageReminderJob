@@ -19,7 +19,7 @@ public class SendCallingReminder : FunctionBase
     {
         _notificationService = notificationService;
         _databaseConfiguration = databaseConfigurationAccessor.CurrentValue;
-        _logger = loggerFactory.CreateLogger<SendUnreadMessageReminder>();
+        _logger = loggerFactory.CreateLogger<SendCallingReminder>();
     }
 
     [Function(Constants.CALLING_REMINDER_QUEUE_TRIGGER)]
@@ -34,7 +34,7 @@ public class SendCallingReminder : FunctionBase
         // query consultation
         var consultation = await GetConsultationAsync(item.Id);
 
-        if (consultation == null || consultation.IsOpen || consultation.Status != ConsultationStatus.Paid)
+        if (consultation == null || !consultation.IsOpen || consultation.Status != ConsultationStatus.Paid)
         {
             var isNull = consultation == null;
             var isClosed = !consultation?.IsOpen;
@@ -89,11 +89,14 @@ public class SendCallingReminder : FunctionBase
 
                 await _notificationService.SendNotificationAsync(messageForManager, notificationForManager, cancellationTokenSource.Token);
             }
+
+            _logger.LogInformation("✅ Notification send requested.");
         }
         catch (Exception ex)
         {
-            _logger.LogWarning(ex, ex.Message);
             cancellationTokenSource.Cancel();
+
+            _logger.LogWarning(ex, ex.Message);
         }
     }
 
@@ -106,23 +109,23 @@ public class SendCallingReminder : FunctionBase
     {
         var queryConsultation = @"
 SELECT
-    top 1 
     consultation.Id,
     consultation.ConsultationType,
-    consultation.[Status],
+    consultation.Status,
     consultation.IsOpen
 FROM
     Consultations consultation
 WHERE
-    consultation.IsDeleted = 0
-AND consultation.IsHidden = 0
-AND consultation.Id = @Id 
+    consultation.IsDeleted  = 0
+AND consultation.IsHidden   = 0
+AND consultation.Id         = @Id 
 ";
 
         Consultation consultation = null;
         using (var connection = new SqlConnection(_databaseConfiguration.ConnectionString))
         {
-            consultation = await connection.QueryFirstOrDefaultAsync<Consultation>(queryConsultation, new { Id = consultationId });
+            var consultations = await connection.QueryAsync<Consultation>(queryConsultation, new { Id = consultationId });
+            consultation = consultations.FirstOrDefault();
         }
 
         return consultation;
@@ -131,32 +134,41 @@ AND consultation.Id = @Id
 
     private async Task<bool> HasNotificationConsultationRelatedAsync(string consultationId)
     {
-        var notificationExists = false;
-        var queryNotification = @"
+        try
+        {
+            var notificationExists = false;
+            var queryNotification = @"
 SELECT
-    top 1
-    Id,
+    CONVERT(nchar(36), Id) as Id,
     NotificationCode
 FROM 
     Notifications
 WHERE 
-    NotificationCode = @NotificationCode 
-AND Id               = @Id
+    NotificationCode     = @NotificationCode 
+AND NotificationTargetId = @NotificationTargetId
     
 ";
 
-        using (var connection = new SqlConnection(_databaseConfiguration.ConnectionString))
-        {
-            var notifications = await connection.QueryAsync<NotificationModel>(queryNotification, new
+            using (var connection = new SqlConnection(_databaseConfiguration.ConnectionString))
             {
-                Id = consultationId,
-                NotificationCode = NotificationCode.ConsultationReady,
-            });
+                var notifications = await connection.QueryAsync<NotificationModel>(queryNotification, new
+                {
+                    NotificationTargetId = consultationId,
+                    NotificationCode = (int)NotificationCode.ConsultationReady,
+                });
 
-            notificationExists = notifications.Any();
+                notificationExists = notifications.Any();
+            }
+
+            return notificationExists;
         }
+        catch (Exception ex)
+        {
+            _logger.LogInformation("❌ Notification query failed");
+            _logger.LogWarning(ex, ex.Message);
 
-        return notificationExists;
+            return true;
+        }
     }
 
     private async Task<List<UserModel>> GetManagersAsync(bool isHospitalManager, string? hospitalId = null)
