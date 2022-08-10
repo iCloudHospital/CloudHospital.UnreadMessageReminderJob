@@ -104,6 +104,11 @@ Unread delayed minutes : {unreadDelayMinutesValue} MIN
             }
         }
 
+        if (IsInDebug)
+        {
+            _logger.LogInformation($"🔨 {response.Items.Count} items enqueued.");
+        }
+
         return response;
     }
 }

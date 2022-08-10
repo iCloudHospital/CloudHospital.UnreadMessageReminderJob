@@ -32,26 +32,7 @@ public class SendCallingReminder : FunctionBase
         var cancellationTokenSource = new CancellationTokenSource();
 
         // query consultation
-        var queryConsultation = @"
-SELECT
-    top 1 
-    consultation.Id,
-    consultation.ConsultationType,
-    consultation.[Status],
-    consultation.IsOpen
-FROM
-    Consultations consultation
-WHERE
-    consultation.IsDeleted = 0
-AND consultation.IsHidden = 0
-AND consultation.Id = @Id 
-";
-
-        Consultation consultation = null;
-        using (var connection = new SqlConnection(_databaseConfiguration.ConnectionString))
-        {
-            consultation = await connection.QueryFirstOrDefaultAsync<Consultation>(queryConsultation, new { Id = item.Id });
-        }
+        var consultation = await GetConsultationAsync(item.Id);
 
         if (consultation == null || consultation.IsOpen || consultation.Status != ConsultationStatus.Paid)
         {
@@ -64,30 +45,7 @@ AND consultation.Id = @Id
         }
 
         // TODO: prevent duplicate nontifications
-        var notificationExists = false;
-        var queryNotification = @"
-SELECT
-    top 1
-    Id,
-    NotificationCode
-FROM 
-    Notifications
-WHERE 
-    NotificationCode = @NotificationCode 
-AND Id               = @Id
-    
-";
-
-        using (var connection = new SqlConnection(_databaseConfiguration.ConnectionString))
-        {
-            var notifications = await connection.QueryAsync<NotificationModel>(queryNotification, new
-            {
-                Id = item.Id,
-                NotificationCode = NotificationCode.ConsultationReady,
-            });
-
-            notificationExists = notifications.Any();
-        }
+        var notificationExists = await HasNotificationConsultationRelatedAsync(item.Id);
 
         if (notificationExists)
         {
@@ -95,69 +53,8 @@ AND Id               = @Id
             return;
         }
 
-        // users
-        List<UserModel> managers = new();
-        IEnumerable<UserModel> queryResults = Enumerable.Empty<UserModel>();
-        using (var connection = new SqlConnection(_databaseConfiguration.ConnectionString))
-        {
-            string queryForManager = string.Empty;
-            if (string.IsNullOrWhiteSpace(item.HospitalWebsiteUrl))
-            {
-                // chmanagers (UserType == 5)
-                queryForManager = @"
-SELECT 
-    u1.Id,
-    u1.LastName,
-    u1.FirstName,
-    '' as Email
-FROM 
-    Users u1
-INNER JOIN 
-    UserAuditableEntities a1
-ON 
-    u1.Id = a1.UserId
-Where 
-    u1.UserType = 5
-AND a1.IsDeleted = 0
-AND a1.IsHidden = 0
-";
-                queryResults = await connection.QueryAsync<UserModel>(queryForManager);
-
-
-            }
-            else
-            {
-                // managers with hospitalId (UserType == 4)
-                queryForManager = @"
-SELECT 
-    u1.Id,
-    u1.LastName,
-    u1.FirstName,
-    '' as Email
-FROM 
-    Users u1
-INNER JOIN 
-    UserAuditableEntities a1
-ON 
-    u1.Id = a1.UserId
-WHERE 
-    u1.UserType = 4
-AND a1.IsDeleted = 0
-AND a1.IsHidden = 0
-AND EXISTS 
-        (
-            SELECT Id 
-            FROM ManagerAffiliations m1
-            WHERE m1.ManagerId = u1.Id
-              and m1.HospitalId = @HospitalId
-        ) 
-";
-
-                queryResults = await connection.QueryAsync<UserModel>(queryForManager, new { HospitalId = item.HospitalId });
-            }
-
-            managers = queryResults.ToList();
-        }
+        // managers
+        List<UserModel> managers = await GetManagersAsync(!string.IsNullOrWhiteSpace(item.HospitalWebsiteUrl), item.HospitalId);
 
         // Send push notification to user
         try
@@ -200,9 +97,134 @@ AND EXISTS
         }
     }
 
+    /// <summary>
+    /// Get consultation 
+    /// </summary>
+    /// <param name="consultationId"></param>
+    /// <returns></returns>
+    private async Task<Consultation> GetConsultationAsync(string consultationId)
+    {
+        var queryConsultation = @"
+SELECT
+    top 1 
+    consultation.Id,
+    consultation.ConsultationType,
+    consultation.[Status],
+    consultation.IsOpen
+FROM
+    Consultations consultation
+WHERE
+    consultation.IsDeleted = 0
+AND consultation.IsHidden = 0
+AND consultation.Id = @Id 
+";
+
+        Consultation consultation = null;
+        using (var connection = new SqlConnection(_databaseConfiguration.ConnectionString))
+        {
+            consultation = await connection.QueryFirstOrDefaultAsync<Consultation>(queryConsultation, new { Id = consultationId });
+        }
+
+        return consultation;
+    }
+
+
+    private async Task<bool> HasNotificationConsultationRelatedAsync(string consultationId)
+    {
+        var notificationExists = false;
+        var queryNotification = @"
+SELECT
+    top 1
+    Id,
+    NotificationCode
+FROM 
+    Notifications
+WHERE 
+    NotificationCode = @NotificationCode 
+AND Id               = @Id
+    
+";
+
+        using (var connection = new SqlConnection(_databaseConfiguration.ConnectionString))
+        {
+            var notifications = await connection.QueryAsync<NotificationModel>(queryNotification, new
+            {
+                Id = consultationId,
+                NotificationCode = NotificationCode.ConsultationReady,
+            });
+
+            notificationExists = notifications.Any();
+        }
+
+        return notificationExists;
+    }
+
+    private async Task<List<UserModel>> GetManagersAsync(bool isHospitalManager, string? hospitalId = null)
+    {
+        IEnumerable<UserModel> queryResults = Enumerable.Empty<UserModel>();
+
+        using (var connection = new SqlConnection(_databaseConfiguration.ConnectionString))
+        {
+            string queryForManager = string.Empty;
+            if (isHospitalManager)
+            {
+                // managers with hospitalId (UserType == 4)
+                queryForManager = @"
+SELECT 
+    u1.Id,
+    u1.LastName,
+    u1.FirstName,
+    '' as Email
+FROM 
+    Users u1
+INNER JOIN 
+    UserAuditableEntities a1
+ON 
+    u1.Id = a1.UserId
+WHERE 
+    u1.UserType = 4
+AND a1.IsDeleted = 0
+AND a1.IsHidden = 0
+AND EXISTS 
+        (
+            SELECT Id 
+            FROM ManagerAffiliations m1
+            WHERE m1.ManagerId = u1.Id
+              and m1.HospitalId = @HospitalId
+        ) 
+";
+
+                queryResults = await connection.QueryAsync<UserModel>(queryForManager, new { HospitalId = hospitalId });
+            }
+            else
+            {
+                // chmanagers (UserType == 5)
+                queryForManager = @"
+SELECT 
+    u1.Id,
+    u1.LastName,
+    u1.FirstName,
+    '' as Email
+FROM 
+    Users u1
+INNER JOIN 
+    UserAuditableEntities a1
+ON 
+    u1.Id = a1.UserId
+Where 
+    u1.UserType = 5
+AND a1.IsDeleted = 0
+AND a1.IsHidden = 0
+";
+                queryResults = await connection.QueryAsync<UserModel>(queryForManager);
+            }
+
+            return queryResults.ToList();
+        }
+    }
+
     private readonly NotificationService _notificationService;
     private readonly DatabaseConfiguration _databaseConfiguration;
-
     private readonly ILogger _logger;
 }
 

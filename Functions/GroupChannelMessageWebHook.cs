@@ -11,11 +11,13 @@ using Microsoft.Extensions.Options;
 
 namespace CloudHospital.UnreadMessageReminderJob;
 
+/// <summary>
+/// sendbird webhook
+/// </summary>
 public class GroupChannelMessageWebHook : HttpTriggerFunctionBase
 {
     private readonly ILogger _logger;
     private readonly JsonSerializerOptions _jsonSerializerOptions;
-
 
     public GroupChannelMessageWebHook(
         IOptionsMonitor<JsonSerializerOptions> jsonSerializerOptionsAccessor,

@@ -3,6 +3,7 @@ using System.Text;
 using System.Text.Json;
 using System.Text.Json.Serialization;
 using CloudHospital.UnreadMessageReminderJob.Models;
+using CloudHospital.UnreadMessageReminderJob.Options;
 using Dapper;
 using Microsoft.Azure.NotificationHubs;
 using Microsoft.Extensions.Logging;
@@ -15,101 +16,35 @@ public class NotificationService
     private readonly NotificationApiConfiguration _notificationApiConfiguration;
     private readonly HttpClient _httpClient;
     private readonly NotificationHubClient _notificationHubClient;
+    private readonly DatabaseConfiguration _databaseConfiguration;
     private readonly ILogger<NotificationService> _logger;
 
     public NotificationService(
         IHttpClientFactory httpClientFactory,
         IOptions<NotificationApiConfiguration> notificationApiConfiguration,
         IOptions<AzureNotificationHubsConfiguration> azureNotificationHubsConfiguration,
+        IOptionsMonitor<DatabaseConfiguration> databaseConfigurationAccessor,
         ILogger<NotificationService> logger
         )
     {
         _notificationApiConfiguration = notificationApiConfiguration.Value ?? new NotificationApiConfiguration();
         _httpClient = httpClientFactory.CreateClient(Constants.HTTP_CLIENT_NOTIFICATION_API);
         _notificationHubClient = NotificationHubClient.CreateClientFromConnectionString(azureNotificationHubsConfiguration.Value.AccessSignature, azureNotificationHubsConfiguration.Value.HubName);
+        _databaseConfiguration = databaseConfigurationAccessor.CurrentValue;
         _logger = logger;
     }
 
     public async Task<NotificationModel> SendNotificationAsync(string title, NotificationModel notification, CancellationToken cancellationToken = default)
     {
         // Insert notification 
-        int effected = 0;
-        var connectionString = Environment.GetEnvironmentVariable(Constants.AZURE_SQL_DATABASE_CONNECTION);
-        var queryInsertNotification = @"
-INSERT INTO Notifications
-(
-    Id,
-    NotificationCode,
-    NotificationTargetId,
-    SenderId,
-    ReceiverId,
-    Message,
-    CreatedAt,
-    IsChecked,
-    IsDeleted
-)
-VALUES 
-(
-    @Id,
-    @NotificationCode,
-    @NotificationTargetId,
-    @SenderId,
-    @ReceiverId,
-    @Message,
-    @CreatedAt,
-    @IsChecked,
-    @IsDeleted
-)
-        ";
-        using (var connection = new SqlConnection(connectionString))
-        {
-            effected = await connection.ExecuteAsync(queryInsertNotification, new
-            {
-                Id = notification.Id,
-                NotificationCode = notification.NotificationCode,
-                NotificationTargetId = notification.NotificationTargetId,
-                SenderId = notification.SenderId,
-                ReceiverId = notification.ReceiverId,
-                Message = notification.Message,
-                CreatedAt = notification.CreatedAt,
-                IsChecked = notification.IsChecked,
-                IsDeleted = notification.IsDeleted,
+        int affected = await InsertNotificationAsync(notification);
 
-            });
-        }
-
-        var succeed = effected > 0;
+        var succeed = affected > 0;
         if (succeed)
         {
-            // var devices = await _context.Devices
-            //     .Where(x => x.AuditableEntity != null && x.AuditableEntity.IsDeleted == false && x.AuditableEntity.IsHidden == false)
-            //     .Where(x => x.UserId == notification.ReceiverId)
-            //     .ToListAsync(cancellationToken);
+            List<DeviceModel> devices = await GetDevicesAsync(notification.ReceiverId);
 
-            var queryDevices = @"
-SELECT
-    device.UserId,
-    device.Platform
-FROM
-    Devices device
-INNER JOIN 
-    DeviceAuditableEntities auditable
-ON
-    device.Id = auditable.DeviceId
-WHERE
-    auditable.IsDeleted = 0
-AND auditable.IsHidden  = 0
-AND device.UserId       = @UserId
-";
-
-            List<DeviceModel> devices = new();
-            using (var connection = new SqlConnection(connectionString))
-            {
-                var result = await connection.QueryAsync<DeviceModel>(queryDevices, new { UserId = notification.ReceiverId });
-                devices = result.ToList();
-            }
-
-            var templateData = await GetTemplateDataByNotificationId(notification.Id);
+            var templateData = await GetTemplateDataByNotificationIdAsync(notification.Id);
 
             var deviceGroups = devices.GroupBy(x => new { x.UserId, x.Platform });
             foreach (var deviceGroup in deviceGroups)
@@ -126,7 +61,7 @@ AND device.UserId       = @UserId
         return notification;
     }
 
-    protected async Task<PushNotificationTemplate> GetTemplateDataByNotificationId(string notificationId, CancellationToken cancellationToken = default)
+    protected async Task<PushNotificationTemplate> GetTemplateDataByNotificationIdAsync(string notificationId, CancellationToken cancellationToken = default)
     {
         // Query notifications
         // var notification = await _context.Notifications
@@ -206,7 +141,7 @@ WHERE
         };
     }
 
-    protected async Task<PushNotificationTemplate> GetTemplateDataByNotificationId(NotificationModel notification, CancellationToken token)
+    protected async Task<PushNotificationTemplate> GetTemplateDataByNotificationIdAsync(NotificationModel notification, CancellationToken token)
     {
         var senderName = (notification.Sender != null) ? $"{notification.Sender.FirstName} {notification.Sender.LastName}" : null;
         var receiverName = (notification.Receiver != null) ? $"{notification.Receiver.FirstName} {notification.Receiver.LastName}" : null;
@@ -306,6 +241,85 @@ WHERE
 
         var payload = JsonSerializer.Serialize(model);
         return new StringContent(payload, Encoding.UTF8, "application/json");
+    }
+
+    private async Task<int> InsertNotificationAsync(NotificationModel notification)
+    {
+        var affected = 0;
+        var queryInsertNotification = @"
+INSERT INTO Notifications
+(
+    Id,
+    NotificationCode,
+    NotificationTargetId,
+    SenderId,
+    ReceiverId,
+    Message,
+    CreatedAt,
+    IsChecked,
+    IsDeleted
+)
+VALUES 
+(
+    @Id,
+    @NotificationCode,
+    @NotificationTargetId,
+    @SenderId,
+    @ReceiverId,
+    @Message,
+    @CreatedAt,
+    @IsChecked,
+    @IsDeleted
+)
+        ";
+        using (var connection = new SqlConnection(_databaseConfiguration.ConnectionString))
+        {
+            affected = await connection.ExecuteAsync(queryInsertNotification, new
+            {
+                Id = notification.Id,
+                NotificationCode = notification.NotificationCode,
+                NotificationTargetId = notification.NotificationTargetId,
+                SenderId = notification.SenderId,
+                ReceiverId = notification.ReceiverId,
+                Message = notification.Message,
+                CreatedAt = notification.CreatedAt,
+                IsChecked = notification.IsChecked,
+                IsDeleted = notification.IsDeleted,
+            });
+        }
+
+        return affected;
+    }
+
+    private async Task<List<DeviceModel>> GetDevicesAsync(string receiverId)
+    {
+        // var devices = await _context.Devices
+        //     .Where(x => x.AuditableEntity != null && x.AuditableEntity.IsDeleted == false && x.AuditableEntity.IsHidden == false)
+        //     .Where(x => x.UserId == notification.ReceiverId)
+        //     .ToListAsync(cancellationToken);
+
+        var queryDevices = @"
+SELECT
+    device.UserId,
+    device.Platform
+FROM
+    Devices device
+INNER JOIN 
+    DeviceAuditableEntities auditable
+ON
+    device.Id = auditable.DeviceId
+WHERE
+    auditable.IsDeleted = 0
+AND auditable.IsHidden  = 0
+AND device.UserId       = @UserId
+";
+
+
+        using (var connection = new SqlConnection(_databaseConfiguration.ConnectionString))
+        {
+            var result = await connection.QueryAsync<DeviceModel>(queryDevices, new { UserId = receiverId });
+            return result.ToList();
+        }
     }
 }
 

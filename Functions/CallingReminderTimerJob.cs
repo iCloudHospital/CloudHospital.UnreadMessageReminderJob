@@ -26,7 +26,7 @@ public class CallingReminderTimerJob : FunctionBase
         CallingReminderQueueResponse response = new();
 
         var callingReminderBasis = Environment.GetEnvironmentVariable(Constants.ENV_CALLING_REMINDER_BASIS);
-        // int unreadDelayMinutesValue = 0;
+        
         if (!int.TryParse(callingReminderBasis, out int callingReminderBasisValue))
         {
             callingReminderBasisValue = 30;
@@ -89,6 +89,10 @@ Calling reminder minutes : {callingReminderBasisValue} MIN
             }
         }
 
+        if (IsInDebug)
+        {
+            _logger.LogInformation($"🔨 {response.Items.Count} items enqueued.");
+        }
 
         return response;
     }
