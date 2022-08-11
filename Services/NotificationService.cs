@@ -64,16 +64,19 @@ public class NotificationService
                 var tags = new List<string> { "$userId:{" + deviceGroup.Key.UserId + "}" };
                 tags.Add(string.Format("AppAlert && {0}", NotificationType.EventAlert.ToString()));
 
-                // TODO: TEST
-                // await SendPushNotificationAsync(tags, deviceGroup.Key.Platform, title, notification.Message, templateData, cancellationToken);
-                _logger.LogInformation("Request push notification. {notification}", JsonSerializer.Serialize(new
+                await SendPushNotificationAsync(tags, deviceGroup.Key.Platform, title, notification.Message, templateData, cancellationToken);
+
+                if (_debugConfiguration.IsInDebug)
                 {
-                    Tags = tags,
-                    PlatForm = deviceGroup.Key.Platform,
-                    Title = title,
-                    Message = notification.Message,
-                    TemplateData = templateData,
-                }, _jsonSerializerOptions));
+                    _logger.LogInformation("Request push notification. {notification}", JsonSerializer.Serialize(new
+                    {
+                        Tags = tags,
+                        PlatForm = deviceGroup.Key.Platform,
+                        Title = title,
+                        Message = notification.Message,
+                        TemplateData = templateData,
+                    }, _jsonSerializerOptions));
+                }
             }
 
             await SendNotificationAsync(notification);
