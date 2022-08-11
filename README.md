@@ -4,53 +4,37 @@
 * Timer Trigger
 * Queue Trigger
 
-### Http triggers
+## Features
 
-Insert wrapped event data from HTTP request body into table storage.
-
-HTTP 요청 본문을 테이블 스토리지에 입력합니다.
-
-POST: /api/GroupChannelMessageSendWebHook
-
-payload: [group_channel:message_send event](https://sendbird.com/docs/chat/v3/platform-api/webhook/events/group-channel#2-group_channel-message_send)
-
-Removes queued entries in table storage with the channel.channel_url value in the HTTP request body.
-
-HTTP 요청 본문의 channel.channel_url 값으로 테이블 스토리지에 대기중인 항목을 제거합니다.
-
-POST: /api/GroupChannelMessageReadWebHook
-
-payload: [group_channel:message_read event](https://sendbird.com/docs/chat/v3/platform-api/webhook/events/group-channel#2-group_channel-message_read)
-
-
-### Timer trigger
-
-Enqueue event data that inserted into table storage 5 minutes before.
-
-5분전에 테이블 스토리지에 입력된  이벤트 데이터를 대기열(Queue storage)에 넣습니다.
-
-### Queue trigger
-
-Process dequeued event data.
-
-대기열에서 빠져나온 이벤트 데이터를 처리합니다.
+* [Unread message reminder job](./README-UnreadMessageReminder.md)
+* [Calling reminder job](./README-CallingReminder.md)
 
 ## Settings
 
-| Environment Variable |  Required | Note |
-| :------------------: |  :------: | :--- |
-| Stage                | ✅        | Application staging |
-| AzureWebJobsStorage  | ✅        | Azure Storage Account connection string |
-| Database             | ✅        | Azure SQL Database connection string |
-| QueueName            | ✅        | Queue name base; Actual queue name is `$(queuename)$(stage)`; e.g.) QueueName: myqueue, Stage: prod ➡️ myqueueprod |
-| TableName            | ✅        | Table name base; Actual table name is `$(tablename)$(stage)`; e.g.) TableName: mytable, Stage: prod ➡️ mytableprod |
-| TimerSchedule        | ✅        | Timer schedule; Cron style schedule; e.g.) Trigger every 5 minutes. ➡️ 0 */5 * * * * |
-| UnreadDelayMinutes   | ✅        | Unread message criteria minutes. |
-| SendGridApiKey       | ✅        | Sendgrid api key |
-| SendGridSenderEmail  | ✅        | Sender email address |
-| SendGridSenderName   | ✅        | Sender display name |
-| SendBirdApiKey       | ✅        | Sendbird api key (master only) |
-| Debug                |           | Show more information |
+| Environment Variable |  Required | Default | Note |
+| :------------------: |  :------: | :---- | :--- |
+| Stage                | ✅        | - | Application staging |
+| AzureWebJobsStorage  | ✅        | - | Azure Storage Account connection string |
+| Database             | ✅        | - | Azure SQL Database connection string |
+| UnreadMessageReminderQueueName            | ✅        | - | Queue name base for unread message reminder job; Actual queue name is `$(UnreadMessageReminderQueueName)$(Stage)`; e.g.) QueueName: myqueue, Stage: prod ➡️ myqueueprod |
+| UnreadMessageReminderTableName            | ✅        | - | Table name base for unread message reminder job; Actual table name is `$(UnreadMessageReminderTableName)$(Stage)`; e.g.) TableName: mytable, Stage: prod ➡️ mytableprod |
+| UnreadMessageReminderTimerSchedule        | ✅        | - | Timer schedule for unread message reminder job; Cron style schedule; e.g.) Trigger every 5 minutes. ➡️ 0 */5 * * * * |
+| UnreadDelayMinutes   | ✅        | - | Unread message criteria minutes. |
+| CallingReminderQueueName | ✅     | - | Queue name base for Calling Reminder job; Actual queue name is `$(CallingReminderQueueName)$(Stage)`; |
+| CallingReminderTableName | ✅     | - | Table name base for Calling Reminder job; Actual table name is `$(CallingReminderTableName)$(Stage)` |
+| CallingReminderTimerSchedule | ✅ | - | Timer schedule for Calling Reminder job |
+| CallingReminderBasis | ✅ | - | Remind basis minutes |
+| SendGridApiKey       | ✅        | - | Sendgrid api key |
+| SendGridSenderEmail  | ✅        | - | Sender email address |
+| SendGridSenderName   | ✅        | - | Sender display name |
+| SendBirdApiKey       | ✅        | - | Sendbird api key (master only) |
+| NotificationApiOidcName | | - | Notification api OIDC name |
+| NotificationApiName | | - | Notification api Api name |
+| NotificationApiBaseUrl | | - | Notification api base url |
+| NotificationApiEnabled | ✅ | false |  Notification api uses or not |
+| NotificationHubConnectionString | ✅ | - | Azure Notification Hub connection string |
+| NotificationHubName | ✅ | - | Azure Notification Hub name |
+| Debug                |           | false | Show more information |
 
 
 ```json
@@ -58,14 +42,25 @@ Process dequeued event data.
     "Stage": "<stage>",
     "AzureWebJobsStorage": "<Azure Storage Account connection string; with queue-endpoint, table-endpoint>",
     "Database": "<Azure SQL Database connection string>",
-    "QueueName": "<queue name base>",
-    "TableName": "<table name base>",
-    "TimerSchedule": "<timer schedume; 0 */1 * * * *>",
-    "UnreadDelayMinutes": <Unread message criteria minutes; 5>,
+    "UnreadMessageReminderQueueName": "<queue name base>",
+    "UnreadMessageReminderTableName": "<table name base>",
+    "UnreadMessageReminderTimerSchedule": "0 */1 * * * *",
+    "UnreadDelayMinutes": 2,
+    "CallingReminderQueueName": "<queue name base>",
+    "CallingReminderTableName": "<table name base>",
+    "CallingReminderTimerSchedule": "0 */1 * * * *",
+    "CallingReminderBasis": 30,
+    "SendBirdApiKey": "<sendbird api key; MUST USE master api key>",
     "SendGridApiKey": "<sendgrid api key>",
     "SendGridSenderEmail": "<sender email address>",
     "SendGridSenderName": "<sender name>",
-    "Debug": false,
+    "NotificationApiOidcName": "<oidc>",
+    "NotificationApiName": "<name>",
+    "NotificationApiBaseUrl": "<base url>",
+    "NotificationApiEnabled": false,
+    "NotificationHubConnectionString": "<Azure notification hub connection string>",
+    "NotificationHubName": "<Azure notification hub name>",
+    "Debug": true,
     "FUNCTIONS_WORKER_RUNTIME": "dotnet-isolated"
 }
 ```
@@ -77,14 +72,25 @@ $ echo '{
     "Stage": "<stage>",
     "AzureWebJobsStorage": "<Azure Storage Account connection string; with queue-endpoint, table-endpoint>",
     "Database": "<Azure SQL Database connection string>",
-    "QueueName": "sendbirdmessages",
-    "TableName": "sendbirdmessages",
-    "TimerSchedule": "0 */5 * * * *",
-    "UnreadDelayMinutes": 5,
+    "UnreadMessageReminderQueueName": "<queue name base>",
+    "UnreadMessageReminderTableName": "<table name base>",
+    "UnreadMessageReminderTimerSchedule": "0 */1 * * * *",
+    "UnreadDelayMinutes": 2,
+    "CallingReminderQueueName": "<queue name base>",
+    "CallingReminderTableName": "<table name base>",
+    "CallingReminderTimerSchedule": "0 */1 * * * *",
+    "CallingReminderBasis": 30,
+    "SendBirdApiKey": "<sendbird api key; MUST USE master api key>",
     "SendGridApiKey": "<sendgrid api key>",
     "SendGridSenderEmail": "<sender email address>",
     "SendGridSenderName": "<sender name>",
-    "Debug": false,
+    "NotificationApiOidcName": "<oidc>",
+    "NotificationApiName": "<name>",
+    "NotificationApiBaseUrl": "<base url>",
+    "NotificationApiEnabled": false,
+    "NotificationHubConnectionString": "<Azure notification hub connection string>",
+    "NotificationHubName": "<Azure notification hub name>",
+    "Debug": true,
     "FUNCTIONS_WORKER_RUNTIME": "dotnet-isolated"
   }
 }' >> local.settings.json

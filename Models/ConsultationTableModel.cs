@@ -3,34 +3,32 @@ using Azure.Data.Tables;
 
 namespace CloudHospital.UnreadMessageReminderJob.Models;
 
-public class EventTableModel : ITableEntity
+public class ConsultationTableModel : ITableEntity
 {
     /// <summary>
-    /// chat group identifier
+    /// Consultation.Id
     /// </summary>
     public string PartitionKey { get; set; }
-
     /// <summary>
-    /// row identifier
+    /// new guid
     /// </summary>
     public string RowKey { get; set; } = Guid.NewGuid().ToString();
 
     /// <summary>
-    /// message
+    /// Consultation.ConfirmedDateStart
     /// </summary>
-    public string Message { get; set; } = string.Empty;
+    public DateTime ConfirmedDateStart { get; set; }
 
-    /// <summary>
-    /// Payload from http trigger
-    /// </summary>
-    public string Json { get; set; } = string.Empty;
-
-    /// <summary>
-    /// Created at
-    /// </summary>
-    public DateTime Created { get; set; } = DateTime.UtcNow;
+    public string Json { get; set; }
 
     public DateTimeOffset? Timestamp { get; set; }
 
     public ETag ETag { get; set; }
+}
+
+public enum ConsultationType : byte
+{
+    Hospital,
+    Doctor,
+    Deal
 }

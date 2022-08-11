@@ -1,4 +1,5 @@
 
+using CloudHospital.UnreadMessageReminderJob.Options;
 using Microsoft.Extensions.Logging;
 using Microsoft.Extensions.Options;
 
@@ -8,11 +9,15 @@ using StrongGrid.Models;
 namespace CloudHospital.UnreadMessageReminderJob.Services;
 public class EmailSender
 {
+    private readonly DebugConfiguration _debugConfiguration;
     private readonly SendgridConfiguration _configuration;
     private readonly ILogger _logger;
 
-    public EmailSender(IOptionsMonitor<SendgridConfiguration> configuration, ILogger<EmailSender> logger)
+    public EmailSender(
+        IOptionsMonitor<DebugConfiguration> debugConfigurationAccessor,
+        IOptionsMonitor<SendgridConfiguration> configuration, ILogger<EmailSender> logger)
     {
+        _debugConfiguration = debugConfigurationAccessor.CurrentValue ?? new();
         _configuration = configuration.CurrentValue;
         _logger = logger;
     }

@@ -4,6 +4,7 @@ using System.Security.Cryptography;
 using System.Text;
 using System.Text.Json;
 using CloudHospital.UnreadMessageReminderJob.Models;
+using CloudHospital.UnreadMessageReminderJob.Options;
 using Microsoft.Azure.Functions.Worker;
 using Microsoft.Azure.Functions.Worker.Http;
 using Microsoft.Extensions.Logging;
@@ -11,22 +12,25 @@ using Microsoft.Extensions.Options;
 
 namespace CloudHospital.UnreadMessageReminderJob;
 
+/// <summary>
+/// sendbird webhook
+/// </summary>
 public class GroupChannelMessageWebHook : HttpTriggerFunctionBase
 {
     private readonly ILogger _logger;
     private readonly JsonSerializerOptions _jsonSerializerOptions;
 
-
     public GroupChannelMessageWebHook(
+        IOptionsMonitor<DebugConfiguration> debugConfigurationAccessor,
         IOptionsMonitor<JsonSerializerOptions> jsonSerializerOptionsAccessor,
         ILoggerFactory loggerFactory)
-        : base()
+        : base(debugConfigurationAccessor)
     {
         _jsonSerializerOptions = jsonSerializerOptionsAccessor.CurrentValue;
         _logger = loggerFactory.CreateLogger<GroupChannelMessageWebHook>();
     }
 
-    [Function("GroupChannelMessageWebHook")]
+    [Function(Constants.UNREAD_MESSAGE_REMINDER_HTTP_TRIGGER)]
     public async Task<HttpResponseData> Run(
         [HttpTrigger(AuthorizationLevel.Anonymous, "post")]
             HttpRequestData req)
@@ -128,8 +132,6 @@ public class GroupChannelMessageWebHook : HttpTriggerFunctionBase
 
             return CreateResponse(req, HttpStatusCode.NotAcceptable);
         }
-
-        return response;
     }
 
     private async Task<HttpResponseData> ProcessGroupChannelMessageRead(HttpRequestData req, string payload)
@@ -182,8 +184,8 @@ public class GroupChannelMessageWebHook : HttpTriggerFunctionBase
         // SendBirdGroupChannelMessageSendEventModel.Sender 에 따라 처리할 내용이 다릅니다.
         // TODO: 사용자 타입 데이터를 어떤 필드에서 확인할 수 있는지 확인 필요
         // When Reader == User
-
-        var tableClient = await GetTableClient();
+        var tableName = GetTableNameForUnreadMessageReminder();
+        var tableClient = await GetTableClient(tableName);
 
         var queryResult = tableClient.QueryAsync<EventTableModel>(filter: $"{nameof(EventTableModel.PartitionKey)} eq '{model.Channel.ChannelUrl}'").AsPages();
 
@@ -271,8 +273,8 @@ public class GroupChannelMessageWebHook : HttpTriggerFunctionBase
         // SendBirdGroupChannelMessageSendEventModel.Sender 에 따라 처리할 내용이 다릅니다.
         // TODO: 사용자 타입 데이터를 어떤 필드에서 확인할 수 있는지 확인 필요
         // When sender: one of [ChManager, Manager]
-
-        var tableClient = await GetTableClient();
+        var tableName = GetTableNameForUnreadMessageReminder();
+        var tableClient = await GetTableClient(tableName);
 
         var queryResult = tableClient.QueryAsync<EventTableModel>(filter: $"{nameof(EventTableModel.PartitionKey)} eq '{model.Channel.ChannelUrl}'").AsPages();
 

@@ -2,10 +2,12 @@ using System;
 using System.Data.SqlClient;
 using System.Linq;
 using CloudHospital.UnreadMessageReminderJob.Models;
+using CloudHospital.UnreadMessageReminderJob.Options;
 using CloudHospital.UnreadMessageReminderJob.Services;
 using Dapper;
 using Microsoft.Azure.Functions.Worker;
 using Microsoft.Extensions.Logging;
+using Microsoft.Extensions.Options;
 
 namespace CloudHospital.UnreadMessageReminderJob;
 
@@ -15,17 +17,18 @@ public class SendUnreadMessageReminder : FunctionBase
     private readonly ILogger _logger;
 
     public SendUnreadMessageReminder(
+        IOptionsMonitor<DebugConfiguration> debugConfigurationAccessor,
         EmailSender emailSender,
         ILoggerFactory loggerFactory)
-        : base()
+        : base(debugConfigurationAccessor)
     {
         _emailSender = emailSender;
         _logger = loggerFactory.CreateLogger<SendUnreadMessageReminder>();
     }
 
-    [Function("SendUnreadMessageReminder")]
+    [Function(Constants.UNREAD_MESSAGE_REMINDER_QUEUE_TRIGGER)]
     public async Task Run(
-        [QueueTrigger("%QueueName%%Stage%", Connection = Constants.AZURE_STORAGE_ACCOUNT_CONNECTION)]
+        [QueueTrigger(Constants.UNREAD_MESSAGE_REMINDER_QUEUE_NAME, Connection = Constants.AZURE_STORAGE_ACCOUNT_CONNECTION)]
             SendBirdGroupChannelMessageSendEventModel item)
     {
         _logger.LogInformation($"⚡️ Dequeue item: {nameof(SendBirdGroupChannelMessageSendEventModel.Channel.ChannelUrl)}={item.Channel.ChannelUrl} {nameof(SendBirdGroupChannelMessageSendEventModel.Payload.MessageId)}={item.Payload.MessageId}");
@@ -225,15 +228,4 @@ AND A.IsHidden = 0
 
         return templateData;
     }
-}
-
-public class UserModel
-{
-    public string Id { get; set; }
-    public string Email { get; set; }
-    public string FirstName { get; set; }
-
-    public string LastName { get; set; }
-
-    public string FullName { get => $"{FirstName} {LastName}"; }
 }

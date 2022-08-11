@@ -1,11 +1,15 @@
 using System.Net;
+using CloudHospital.UnreadMessageReminderJob.Options;
 using Microsoft.Azure.Functions.Worker.Http;
+using Microsoft.Extensions.Options;
 
 namespace CloudHospital.UnreadMessageReminderJob;
 
 public abstract class HttpTriggerFunctionBase : FunctionBase
 {
-    public HttpTriggerFunctionBase() : base()
+    public HttpTriggerFunctionBase(
+        IOptionsMonitor<DebugConfiguration> debugConfigurationAccessor)
+        : base(debugConfigurationAccessor)
     {
 
     }

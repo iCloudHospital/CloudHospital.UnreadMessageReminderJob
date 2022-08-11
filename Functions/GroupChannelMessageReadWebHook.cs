@@ -1,3 +1,4 @@
+using System;
 using System.Net;
 using System.Text.Json;
 using CloudHospital.UnreadMessageReminderJob.Models;
@@ -11,6 +12,7 @@ namespace CloudHospital.UnreadMessageReminderJob;
 /// <summary>
 /// sendbird webhook: group_channel:message_read
 /// </summary>
+[Obsolete("Sendbird webhook support one endpoint only. Move this feature to GroupChannelMessageWebHook class")]
 public class GroupChannelMessageReadWebHook : HttpTriggerFunctionBase
 {
     private readonly ILogger _logger;
@@ -18,15 +20,16 @@ public class GroupChannelMessageReadWebHook : HttpTriggerFunctionBase
 
 
     public GroupChannelMessageReadWebHook(
+        IOptionsMonitor<DebugConfiguration> debugConfigurationAccessor,
         IOptionsMonitor<JsonSerializerOptions> jsonSerializerOptionsAccessor,
         ILoggerFactory loggerFactory)
-        : base()
+        : base(debugConfigurationAccessor)
     {
         _jsonSerializerOptions = jsonSerializerOptionsAccessor.CurrentValue;
         _logger = loggerFactory.CreateLogger<GroupChannelMessageSendWebHook>();
     }
 
-    [Function("GroupChannelMessageReadWebHook")]
+    // [Function("GroupChannelMessageReadWebHook")]
     public async Task<HttpResponseData> Run(
         [HttpTrigger(AuthorizationLevel.Function, "post")]
             HttpRequestData req)

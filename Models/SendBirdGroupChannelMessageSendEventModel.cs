@@ -144,11 +144,9 @@ public class SendBirdGroupChannelModel
     public string Data { get; set; }
 }
 
-// TODO: Verify fields
+
 public class MetadataModel
 {
-    public string? Unknown { get; set; }
-
     public string? UserType { get; set; }
 }
 
