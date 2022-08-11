@@ -86,7 +86,7 @@ public static class UnsubscribeGroupIds
 /// <remarks>
 /// https://mc.sendgrid.com/dynamic-templates
 /// </remarks>
-public static class EmailTemplateIds
-{
-    public const string UnreadMessage = "d-ae813a9bdc0d4ad39ab6adae3bcbae19";
-}
+// public static class EmailTemplateIds
+// {
+//     public const string UnreadMessage = "d-ae813a9bdc0d4ad39ab6adae3bcbae19";
+// }

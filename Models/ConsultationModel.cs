@@ -13,3 +13,14 @@ public class ConsultationModel
 
     public bool IsOpen { get; set; }
 }
+
+public class HospitalModel
+{
+    public string Id { get; set; }
+
+    public string WebsiteUrl { get; set; }
+
+    public string Logo { get; set; }
+
+    public string Name { get; set; }
+}

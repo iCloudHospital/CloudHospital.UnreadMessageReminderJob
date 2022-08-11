@@ -142,22 +142,6 @@ public class GroupChannelMessageWebHook : HttpTriggerFunctionBase
 
         var response = CreateResponse(req, HttpStatusCode.OK);
 
-        //var payload = string.Empty;
-
-        //req.Body.Position = 0;
-
-        //using (var reader = new StreamReader(req.Body))
-        //{
-        //    payload = await reader.ReadToEndAsync();
-        //    reader.Close();
-        //}
-
-        //if (string.IsNullOrWhiteSpace(payload))
-        //{
-        //    _logger.LogWarning("Payload is empty.");
-        //    return CreateResponse(req, HttpStatusCode.BadRequest);
-        //}
-
         try
         {
             model = JsonSerializer.Deserialize<SendBirdGroupChannelMessageSendEventModel>(payload, _jsonSerializerOptions);
@@ -213,22 +197,6 @@ public class GroupChannelMessageWebHook : HttpTriggerFunctionBase
 
         var response = CreateResponse(req, HttpStatusCode.OK);
 
-        //var payload = string.Empty;
-
-        //req.Body.Position = 0;
-
-        //using (var reader = new StreamReader(req.Body))
-        //{
-        //    payload = await reader.ReadToEndAsync();
-        //    reader.Close();
-        //}
-
-        //if (string.IsNullOrWhiteSpace(payload))
-        //{
-        //    _logger.LogWarning("Payload is empty.");
-        //    return CreateResponse(req, HttpStatusCode.BadRequest);
-        //}
-
         try
         {
             model = JsonSerializer.Deserialize<SendBirdGroupChannelMessageSendEventModel>(payload, _jsonSerializerOptions);
@@ -249,15 +217,14 @@ public class GroupChannelMessageWebHook : HttpTriggerFunctionBase
         if (IsInDebug)
         {
             _logger.LogInformation($"Payload #1: {payload}");
-            // _logger.LogInformation($"Payload #2: {JsonSerializer.Serialize(model, _jsonSerializerOptions)}");
-            // _logger.LogInformation($"GroupId: {model.GroupId}");
         }
 
         var targetUserTypes = new string[] { SendBirdSenderUserTypes.ChManager, SendBirdSenderUserTypes.Manager };
 
-        if (!targetUserTypes.Contains(model.Sender.Metadata.UserType))
+        if (!targetUserTypes.Contains(model.Sender?.Metadata?.UserType))
         {
             // target userType is one of [CHManager, Manager]
+            _logger.LogInformation("✅ Done. The sender is not user type to processing.");
             return response;
         }
 

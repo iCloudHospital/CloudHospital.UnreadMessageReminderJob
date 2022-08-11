@@ -4,6 +4,11 @@ public class Constants
 {
     // Name of environment variable
     public const string ENV_STAGE = "Stage";
+    /// <summary>
+    /// CloudHospital logo url
+    /// </summary>
+    public const string ENV_LOGO_IMAGE_URL = "LogoImageUrl";
+    public const string ENV_CLOUDHOSPITAL_BASEURL = "CloudHospitalBaseUrl";
     public const string ENV_SENDGRID_APIKEY = "SendGridApiKey";
     public const string ENV_SENDGRID_SENDER_EMAIL = "SendGridSenderEmail";
     public const string ENV_SENDGRID_SENDER_NAME = "SendGridSenderName";
@@ -11,7 +16,7 @@ public class Constants
     public const string ENV_UNREAD_MESSAGE_REMINDER_TABLE_NAME = "UnreadMessageReminderTableName";
     public const string ENV_UNREAD_MESSAGE_REMINDER_TIMER_SCHEDULE = "UnreadMessageReminderTimerSchedule";
     public const string ENV_UNREAD_DELAY_MINUTES = "UnreadDelayMinutes";
-
+    public const string ENV_UNREAD_MESSAGE_REMINDER_SENDGRID_TEMPLATE_ID = "UnreadMessageReminderSendGridTemplateId";
     public const string ENV_CALLING_REMINDER_TABLE_NAME = "CallingReminderTableName";
     public const string ENV_CALLING_REMINDER_QUEUE_NAME = "CallingReminderQueueName";
     public const string ENV_CALLING_REMINDER_TIMER_SCHEDULE = "CallingReminderTimerSchedule";
