@@ -20,9 +20,10 @@ public class GroupChannelMessageReadWebHook : HttpTriggerFunctionBase
 
 
     public GroupChannelMessageReadWebHook(
+        IOptionsMonitor<DebugConfiguration> debugConfigurationAccessor,
         IOptionsMonitor<JsonSerializerOptions> jsonSerializerOptionsAccessor,
         ILoggerFactory loggerFactory)
-        : base()
+        : base(debugConfigurationAccessor)
     {
         _jsonSerializerOptions = jsonSerializerOptionsAccessor.CurrentValue;
         _logger = loggerFactory.CreateLogger<GroupChannelMessageSendWebHook>();

@@ -104,6 +104,18 @@ var host = new HostBuilder()
                 options.HubName = notificationHubName;
             });
 
+        services.AddOptions<DebugConfiguration>()
+            .Configure(options =>
+            {
+                var isInDebug = Environment.GetEnvironmentVariable(Constants.ENV_DEBUG);
+                if (!bool.TryParse(isInDebug, out bool isInDebugValue))
+                {
+                    isInDebugValue = false;
+                }
+
+                options.IsInDebug = isInDebugValue;
+            });
+
         services.AddTransient<EmailSender>();
         services.AddTransient<NotificationService>();
 

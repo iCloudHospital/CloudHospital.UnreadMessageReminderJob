@@ -1,6 +1,7 @@
 using System;
 using System.Text.Json;
 using CloudHospital.UnreadMessageReminderJob.Models;
+using CloudHospital.UnreadMessageReminderJob.Options;
 using Microsoft.Azure.Functions.Worker;
 using Microsoft.Extensions.Logging;
 using Microsoft.Extensions.Options;
@@ -14,9 +15,10 @@ public class UnreadMessageReminderTimerJob : FunctionBase
     private readonly ILogger _logger;
 
     public UnreadMessageReminderTimerJob(
+        IOptionsMonitor<DebugConfiguration> debugConfigurationAccessor,
         IOptionsMonitor<JsonSerializerOptions> jsonSerializerOptionsAccessor,
         ILoggerFactory loggerFactory)
-        : base()
+        : base(debugConfigurationAccessor)
     {
         _jsonSerializerOptions = jsonSerializerOptionsAccessor.CurrentValue;
         _logger = loggerFactory.CreateLogger<UnreadMessageReminderTimerJob>();

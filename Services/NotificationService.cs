@@ -17,6 +17,8 @@ public class NotificationService
     private readonly HttpClient _httpClient;
     private readonly NotificationHubClient _notificationHubClient;
     private readonly DatabaseConfiguration _databaseConfiguration;
+    private readonly DebugConfiguration _debugConfiguration;
+    private readonly JsonSerializerOptions _jsonSerializerOptions;
     private readonly ILogger<NotificationService> _logger;
 
     public NotificationService(
@@ -24,6 +26,8 @@ public class NotificationService
         IOptions<NotificationApiConfiguration> notificationApiConfiguration,
         IOptions<AzureNotificationHubsConfiguration> azureNotificationHubsConfiguration,
         IOptionsMonitor<DatabaseConfiguration> databaseConfigurationAccessor,
+        IOptionsMonitor<DebugConfiguration> debugConfigurationAccessor,
+        IOptionsMonitor<JsonSerializerOptions> jsonSerializerOptionsAccessor,
         ILogger<NotificationService> logger
         )
     {
@@ -31,6 +35,9 @@ public class NotificationService
         _httpClient = httpClientFactory.CreateClient(Constants.HTTP_CLIENT_NOTIFICATION_API);
         _notificationHubClient = NotificationHubClient.CreateClientFromConnectionString(azureNotificationHubsConfiguration.Value.AccessSignature, azureNotificationHubsConfiguration.Value.HubName);
         _databaseConfiguration = databaseConfigurationAccessor.CurrentValue;
+        _debugConfiguration = debugConfigurationAccessor.CurrentValue ?? new();
+        _jsonSerializerOptions = jsonSerializerOptionsAccessor.CurrentValue;
+
         _logger = logger;
     }
 
@@ -46,6 +53,11 @@ public class NotificationService
 
             var templateData = await GetTemplateDataByNotificationIdAsync(notification.Id);
 
+            if (_debugConfiguration.IsInDebug)
+            {
+                _logger.LogInformation(@"🔨 Template Data: {json}", JsonSerializer.Serialize(templateData, _jsonSerializerOptions));
+            }
+
             var deviceGroups = devices.GroupBy(x => new { x.UserId, x.Platform });
             foreach (var deviceGroup in deviceGroups)
             {
@@ -54,14 +66,14 @@ public class NotificationService
 
                 // TODO: TEST
                 // await SendPushNotificationAsync(tags, deviceGroup.Key.Platform, title, notification.Message, templateData, cancellationToken);
-                _logger.LogInformation("Request push notification. {@notification}", new
+                _logger.LogInformation("Request push notification. {notification}", JsonSerializer.Serialize(new
                 {
                     Tags = tags,
                     PlatForm = deviceGroup.Key.Platform,
                     Title = title,
                     Message = notification.Message,
                     TemplateData = templateData,
-                });
+                }, _jsonSerializerOptions));
             }
 
             await SendNotificationAsync(notification);

@@ -1,6 +1,7 @@
 using System.Net;
 using System.Text.Json;
 using CloudHospital.UnreadMessageReminderJob.Models;
+using CloudHospital.UnreadMessageReminderJob.Options;
 using Microsoft.Azure.Functions.Worker;
 using Microsoft.Azure.Functions.Worker.Http;
 using Microsoft.Extensions.Logging;
@@ -11,8 +12,10 @@ namespace CloudHospital.UnreadMessageReminderJob;
 public class CallingReminderConsultationUpdatedWebhook : HttpTriggerFunctionBase
 {
     public CallingReminderConsultationUpdatedWebhook(
+        IOptionsMonitor<DebugConfiguration> debugConfigurationAccessor,
         IOptionsMonitor<JsonSerializerOptions> jsonSerializerOptionsAccessor,
         ILoggerFactory loggerFactory)
+        : base(debugConfigurationAccessor)
     {
         _jsonSerializerOptions = jsonSerializerOptionsAccessor.CurrentValue;
         _logger = loggerFactory.CreateLogger<CallingReminderConsultationUpdatedWebhook>();

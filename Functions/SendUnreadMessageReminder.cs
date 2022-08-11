@@ -2,10 +2,12 @@ using System;
 using System.Data.SqlClient;
 using System.Linq;
 using CloudHospital.UnreadMessageReminderJob.Models;
+using CloudHospital.UnreadMessageReminderJob.Options;
 using CloudHospital.UnreadMessageReminderJob.Services;
 using Dapper;
 using Microsoft.Azure.Functions.Worker;
 using Microsoft.Extensions.Logging;
+using Microsoft.Extensions.Options;
 
 namespace CloudHospital.UnreadMessageReminderJob;
 
@@ -15,9 +17,10 @@ public class SendUnreadMessageReminder : FunctionBase
     private readonly ILogger _logger;
 
     public SendUnreadMessageReminder(
+        IOptionsMonitor<DebugConfiguration> debugConfigurationAccessor,
         EmailSender emailSender,
         ILoggerFactory loggerFactory)
-        : base()
+        : base(debugConfigurationAccessor)
     {
         _emailSender = emailSender;
         _logger = loggerFactory.CreateLogger<SendUnreadMessageReminder>();

@@ -12,10 +12,11 @@ namespace CloudHospital.UnreadMessageReminderJob;
 public class SendCallingReminder : FunctionBase
 {
     public SendCallingReminder(
+        IOptionsMonitor<DebugConfiguration> debugConfigurationAccessor,
         NotificationService notificationService,
         IOptionsMonitor<DatabaseConfiguration> databaseConfigurationAccessor,
         ILoggerFactory loggerFactory)
-        : base()
+        : base(debugConfigurationAccessor)
     {
         _notificationService = notificationService;
         _databaseConfiguration = databaseConfigurationAccessor.CurrentValue;

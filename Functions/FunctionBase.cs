@@ -1,16 +1,21 @@
 using Azure.Data.Tables;
 using Azure.Storage.Queues;
+using CloudHospital.UnreadMessageReminderJob.Options;
+using Microsoft.Extensions.Options;
 
 namespace CloudHospital.UnreadMessageReminderJob;
 
 public abstract class FunctionBase
 {
-    public FunctionBase()
+    public FunctionBase(IOptionsMonitor<DebugConfiguration> debugConfigurationAccessor)
     {
-        isInDebug = GetDebugMode();
+        _debugConfiguration = debugConfigurationAccessor.CurrentValue ?? new();
+
     }
 
-    protected bool IsInDebug => isInDebug;
+    protected DebugConfiguration DebugConfiguration { get => _debugConfiguration; }
+
+    protected bool IsInDebug { get => _debugConfiguration.IsInDebug; }
 
     protected async Task<TableClient> GetTableClient(string tableName)
     {
@@ -75,18 +80,5 @@ public abstract class FunctionBase
         return queueNameActural;
     }
 
-    private bool GetDebugMode()
-    {
-        var debug = Environment.GetEnvironmentVariable(Constants.ENV_DEBUG);
-        if (!bool.TryParse(debug, out bool isDebug))
-        {
-            return false;
-        }
-
-        return isDebug;
-    }
-
-
-
-    private readonly bool isInDebug;
+    private readonly DebugConfiguration _debugConfiguration;
 }
