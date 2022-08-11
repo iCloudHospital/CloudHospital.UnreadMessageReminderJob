@@ -14,12 +14,15 @@
 | Environment Variable |  Required | Default | Note |
 | :------------------: |  :------: | :---- | :--- |
 | Stage                | ✅        | - | Application staging |
+| LogoImageUrl         | ✅        | - | Default logo image url |
+| CloudHospitalBaseUrl | ✅        | - | Default web application  url |
 | AzureWebJobsStorage  | ✅        | - | Azure Storage Account connection string |
 | Database             | ✅        | - | Azure SQL Database connection string |
 | UnreadMessageReminderQueueName            | ✅        | - | Queue name base for unread message reminder job; Actual queue name is `$(UnreadMessageReminderQueueName)$(Stage)`; e.g.) QueueName: myqueue, Stage: prod ➡️ myqueueprod |
 | UnreadMessageReminderTableName            | ✅        | - | Table name base for unread message reminder job; Actual table name is `$(UnreadMessageReminderTableName)$(Stage)`; e.g.) TableName: mytable, Stage: prod ➡️ mytableprod |
 | UnreadMessageReminderTimerSchedule        | ✅        | - | Timer schedule for unread message reminder job; Cron style schedule; e.g.) Trigger every 5 minutes. ➡️ 0 */5 * * * * |
 | UnreadDelayMinutes   | ✅        | - | Unread message criteria minutes. |
+| UnreadMessageReminderSendGridTemplateId | ✅ | - | Send grid teamplate id |
 | CallingReminderQueueName | ✅     | - | Queue name base for Calling Reminder job; Actual queue name is `$(CallingReminderQueueName)$(Stage)`; |
 | CallingReminderTableName | ✅     | - | Table name base for Calling Reminder job; Actual table name is `$(CallingReminderTableName)$(Stage)` |
 | CallingReminderTimerSchedule | ✅ | - | Timer schedule for Calling Reminder job |
