@@ -1,9 +1,7 @@
 using System.Text.Json;
 using CloudHospital.UnreadMessageReminderJob;
-using CloudHospital.UnreadMessageReminderJob.Converters;
 using CloudHospital.UnreadMessageReminderJob.Options;
 using CloudHospital.UnreadMessageReminderJob.Services;
-using Microsoft.Extensions.Configuration;
 using Microsoft.Extensions.DependencyInjection;
 using Microsoft.Extensions.Hosting;
 
@@ -49,41 +47,6 @@ var host = new HostBuilder()
                 options.SourceName = sendGridSenderName;
             });
 
-        services.AddOptions<NotificationApiConfiguration>()
-            .Configure((options) =>
-            {
-                var notificationApiEnabled = Environment.GetEnvironmentVariable(Constants.ENV_NOTIFICATION_API_ENABLED);
-
-                if (!bool.TryParse(notificationApiEnabled, out bool notificationApiEnabledValue))
-                {
-                    notificationApiEnabledValue = false;
-                }
-                var oidcName = Environment.GetEnvironmentVariable(Constants.ENV_NOTIFICATION_API_OIDC_NAME);
-                var apiName = Environment.GetEnvironmentVariable(Constants.ENV_NOTIFICATION_API_NAME);
-                var baseUrl = Environment.GetEnvironmentVariable(Constants.ENV_NOTIFICATION_API_BASE_URL);
-
-                if (notificationApiEnabledValue)
-                {
-                    if (string.IsNullOrWhiteSpace(oidcName))
-                    {
-                        throw new ArgumentException("Notification api oidc name does not configure. Please check application settings.");
-                    }
-                    if (string.IsNullOrWhiteSpace(apiName))
-                    {
-                        throw new ArgumentException("Notification api name does not configure. Please check application settings.");
-                    }
-                    if (string.IsNullOrWhiteSpace(baseUrl))
-                    {
-                        throw new ArgumentException("Notification api base url does not configure. Please check application settings.");
-                    }
-                }
-
-                options.OidcName = oidcName;
-                options.ApiName = apiName;
-                options.BaseUrl = baseUrl;
-                options.Enabled = notificationApiEnabledValue;
-            });
-
         services.AddOptions<AzureNotificationHubsConfiguration>()
             .Configure(options =>
             {
@@ -118,25 +81,6 @@ var host = new HostBuilder()
 
         services.AddTransient<EmailSender>();
         services.AddTransient<NotificationService>();
-
-        services.AddHttpClient(Constants.HTTP_CLIENT_NOTIFICATION_API, (serviceProvider, client) =>
-        {
-            var baseUrl = Environment.GetEnvironmentVariable(Constants.ENV_NOTIFICATION_API_BASE_URL);
-            client.BaseAddress = new Uri(baseUrl);
-
-            // TODO: How to set user's access token
-            string bearerToken = null;
-            // var httpContextAccessor = serviceProvider.GetRequiredService<IHttpContextAccessor>();
-            // var bearerToken = httpContextAccessor.HttpContext?.Request
-            //     .Headers["Authorization"]
-            //     .FirstOrDefault(header => header.StartsWith("bearer ", StringComparison.InvariantCultureIgnoreCase));
-
-            // Add authorization if found
-            if (!string.IsNullOrWhiteSpace(bearerToken))
-            {
-                client.DefaultRequestHeaders.Add("Authorization", bearerToken);
-            }
-        });
     })
     .Build();
 
