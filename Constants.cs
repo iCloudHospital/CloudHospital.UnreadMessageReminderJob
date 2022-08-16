@@ -24,11 +24,6 @@ public class Constants
 
     public const string ENV_SENDBIRD_API_KEY = "SendBirdApiKey";
 
-    public const string ENV_NOTIFICATION_API_OIDC_NAME = "NotificationApiOidcName";
-    public const string ENV_NOTIFICATION_API_NAME = "NotificationApiName";
-    public const string ENV_NOTIFICATION_API_BASE_URL = "NotificationApiBaseUrl";
-    public const string ENV_NOTIFICATION_API_ENABLED = "NotificationApiEnabled";
-
     public const string ENV_NOTIFICATION_HUB_CONNECTION_STRING = "NotificationHubConnectionString";
     public const string ENV_NOTIFICATION_HUB_NAME = "NotificationHubName";
 
