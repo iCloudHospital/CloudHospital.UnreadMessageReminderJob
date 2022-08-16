@@ -1,5 +1,4 @@
 using System.Data.SqlClient;
-using System.Text;
 using System.Text.Json;
 using System.Text.Json.Serialization;
 using CloudHospital.UnreadMessageReminderJob.Models;
@@ -13,8 +12,6 @@ namespace CloudHospital.UnreadMessageReminderJob.Services;
 
 public class NotificationService
 {
-    private readonly NotificationApiConfiguration _notificationApiConfiguration;
-    private readonly HttpClient _httpClient;
     private readonly NotificationHubClient _notificationHubClient;
     private readonly DatabaseConfiguration _databaseConfiguration;
     private readonly DebugConfiguration _debugConfiguration;
@@ -22,8 +19,6 @@ public class NotificationService
     private readonly ILogger<NotificationService> _logger;
 
     public NotificationService(
-        IHttpClientFactory httpClientFactory,
-        IOptions<NotificationApiConfiguration> notificationApiConfiguration,
         IOptions<AzureNotificationHubsConfiguration> azureNotificationHubsConfiguration,
         IOptionsMonitor<DatabaseConfiguration> databaseConfigurationAccessor,
         IOptionsMonitor<DebugConfiguration> debugConfigurationAccessor,
@@ -31,8 +26,6 @@ public class NotificationService
         ILogger<NotificationService> logger
         )
     {
-        _notificationApiConfiguration = notificationApiConfiguration.Value ?? new NotificationApiConfiguration();
-        _httpClient = httpClientFactory.CreateClient(Constants.HTTP_CLIENT_NOTIFICATION_API);
         _notificationHubClient = NotificationHubClient.CreateClientFromConnectionString(azureNotificationHubsConfiguration.Value.AccessSignature, azureNotificationHubsConfiguration.Value.HubName);
         _databaseConfiguration = databaseConfigurationAccessor.CurrentValue;
         _debugConfiguration = debugConfigurationAccessor.CurrentValue ?? new();
@@ -78,8 +71,6 @@ public class NotificationService
                     }, _jsonSerializerOptions));
                 }
             }
-
-            await SendNotificationAsync(notification);
         }
 
         return notification;
@@ -234,47 +225,6 @@ WHERE
         {
             _logger.LogError(ex, "Push Notification error");
         }
-    }
-
-    private async Task SendNotificationAsync(NotificationModel model, CancellationToken cancellationToken = default)
-    {
-        if (!_notificationApiConfiguration.Enabled || string.IsNullOrWhiteSpace(model.ReceiverId) || string.IsNullOrWhiteSpace(model.ReceiverId))
-        {
-            return;
-        }
-
-        var baseUrl = _notificationApiConfiguration.BaseUrl;
-        var path = "/api/v1/notifications";
-        var requestMessage = new HttpRequestMessage(HttpMethod.Post, $"{baseUrl}{path}");
-        requestMessage.Content = CreateHttpContent(model);
-
-        try
-        {
-            var responseMessage = await _httpClient.SendAsync(requestMessage, cancellationToken);
-
-            if (!responseMessage.IsSuccessStatusCode)
-            {
-                throw new Exception("Error response from notification center");
-            }
-        }
-        catch (Exception ex)
-        {
-            _logger.LogError($"Fail to send notification: {ex.Message}");
-        }
-    }
-
-    private HttpContent CreateHttpContent(NotificationModel notification)
-    {
-        var model = new NotificationRequestModel
-        {
-            NotificationCode = notification.NotificationCode.ToString(),
-            NotificationTargetId = notification.NotificationTargetId,
-            ReceiverId = notification.ReceiverId,
-            Message = notification.Message
-        };
-
-        var payload = JsonSerializer.Serialize(model);
-        return new StringContent(payload, Encoding.UTF8, "application/json");
     }
 
     private async Task<int> InsertNotificationAsync(NotificationModel notification)
