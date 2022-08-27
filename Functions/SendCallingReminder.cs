@@ -45,7 +45,7 @@ public class SendCallingReminder : FunctionBase
             return;
         }
 
-        // TODO: prevent duplicate nontifications
+        // prevent duplicate nontifications
         var notificationExists = await HasNotificationConsultationRelatedAsync(item.Id);
 
         if (notificationExists)
@@ -106,7 +106,7 @@ public class SendCallingReminder : FunctionBase
     /// </summary>
     /// <param name="consultationId"></param>
     /// <returns></returns>
-    private async Task<Consultation> GetConsultationAsync(string consultationId)
+    private async Task<Consultation?> GetConsultationAsync(string consultationId)
     {
         var queryConsultation = @"
 SELECT
@@ -123,6 +123,7 @@ AND consultation.Id         = @Id
 ";
 
         Consultation consultation = null;
+
         using (var connection = new SqlConnection(_databaseConfiguration.ConnectionString))
         {
             var consultations = await connection.QueryAsync<Consultation>(queryConsultation, new { Id = consultationId });
