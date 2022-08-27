@@ -38,7 +38,7 @@ public class GroupChannelMessageWebHook : HttpTriggerFunctionBase
         _logger.LogInformation($"⚡️ [{nameof(GroupChannelMessageWebHook)}] HTTP trigger function processed a request.");
 
         SendBirdGroupChannelEventModel model = null;
-        //
+
         var response = CreateResponse(req, HttpStatusCode.OK);
 
         var payload = string.Empty;
@@ -110,13 +110,6 @@ public class GroupChannelMessageWebHook : HttpTriggerFunctionBase
             return CreateResponse(req, HttpStatusCode.BadRequest);
         }
 
-        if (IsInDebug)
-        {
-            //_logger.LogInformation($"Payload #1: {payload}");
-            // _logger.LogInformation($"Payload #2: {JsonSerializer.Serialize(model, _jsonSerializerOptions)}");
-            // _logger.LogInformation($"GroupId: {model.GroupId}");
-        }
-
         if (model.Category == SendBirdGroupChannelEventCategories.MessageRead)
         {
             return await ProcessGroupChannelMessageRead(req, payload);
@@ -166,7 +159,6 @@ public class GroupChannelMessageWebHook : HttpTriggerFunctionBase
         }
 
         // SendBirdGroupChannelMessageSendEventModel.Sender 에 따라 처리할 내용이 다릅니다.
-        // TODO: 사용자 타입 데이터를 어떤 필드에서 확인할 수 있는지 확인 필요
         // When Reader == User
         var tableName = GetTableNameForUnreadMessageReminder();
         var tableClient = await GetTableClient(tableName);
@@ -232,13 +224,12 @@ public class GroupChannelMessageWebHook : HttpTriggerFunctionBase
         {
             PartitionKey = model.Channel.ChannelUrl,
             RowKey = Guid.NewGuid().ToString(),
-            Message = "Hello world from Table!!",
+            Message = string.Empty,
             Json = payload,
             Created = DateTime.UtcNow, //model.Payload.CreatedAt,
         };
 
         // SendBirdGroupChannelMessageSendEventModel.Sender 에 따라 처리할 내용이 다릅니다.
-        // TODO: 사용자 타입 데이터를 어떤 필드에서 확인할 수 있는지 확인 필요
         // When sender: one of [ChManager, Manager]
         var tableName = GetTableNameForUnreadMessageReminder();
         var tableClient = await GetTableClient(tableName);
