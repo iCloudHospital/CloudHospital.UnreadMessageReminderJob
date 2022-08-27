@@ -78,7 +78,6 @@ public class GroupChannelMessageReadWebHook : HttpTriggerFunctionBase
         }
 
         // SendBirdGroupChannelMessageSendEventModel.Sender 에 따라 처리할 내용이 다릅니다.
-        // TODO: 사용자 타입 데이터를 어떤 필드에서 확인할 수 있는지 확인 필요
         // When Reader == User
 
         var tableClient = await GetTableClient();

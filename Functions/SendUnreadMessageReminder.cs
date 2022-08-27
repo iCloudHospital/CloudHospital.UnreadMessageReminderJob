@@ -38,6 +38,7 @@ public class SendUnreadMessageReminder : FunctionBase
         [QueueTrigger(Constants.UNREAD_MESSAGE_REMINDER_QUEUE_NAME, Connection = Constants.AZURE_STORAGE_ACCOUNT_CONNECTION)]
             SendBirdGroupChannelMessageSendEventModel item)
     {
+        var logMessage = string.Empty;
         _logger.LogInformation($"⚡️ Dequeue item: {nameof(SendBirdGroupChannelMessageSendEventModel.Channel.ChannelUrl)}={item.Channel.ChannelUrl} {nameof(SendBirdGroupChannelMessageSendEventModel.Payload.MessageId)}={item.Payload.MessageId}");
 
         if (IsInDebug)
@@ -46,14 +47,24 @@ public class SendUnreadMessageReminder : FunctionBase
             _logger.LogInformation($"🔨 Email sender is ready: {_emailSender != null}");
         }
 
+        if (_emailSender == null)
+        {
+            logMessage = "Email sender service is not configured. Please check app configuration.";
+            _logger.LogWarning(logMessage);
+
+            throw new Exception(logMessage);
+        }
+
         var emailTemplateId = Environment.GetEnvironmentVariable(Constants.ENV_UNREAD_MESSAGE_REMINDER_SENDGRID_TEMPLATE_ID);
 
         if (string.IsNullOrWhiteSpace(emailTemplateId))
         {
-            _logger.LogWarning("Unread message reminder email template does not set. Please check app configuration.");
+            logMessage = "Unread message reminder email template does not set. Please check app configuration.";
+            _logger.LogWarning(logMessage);
+
+            throw new Exception(logMessage);
         }
 
-        // TODO: 사용자 타입 데이터를 어떤 필드에서 확인할 수 있는지 확인 필요
         // sender == [ChManager, Manager]
         var userType = item.Sender?.Metadata?.UserType;
 
@@ -65,9 +76,9 @@ public class SendUnreadMessageReminder : FunctionBase
             _logger.LogInformation("Member does not found.");
         }
 
-        //! find user email
+        // find user email
         var userId = member?.UserId;
-        var hospitalId = GetHospitalIdFromChannelUrl(item.Channel.ChannelUrl);
+        var hospitalId = item.Channel.CustomType;
 
         if (IsInDebug)
         {
@@ -109,11 +120,6 @@ website: {website}
 
             // send email using sendgrid template
             var message = item.Payload?.Message ?? "You have unread chat message. Please check your message our application.";
-
-            // if (IsInDebug)
-            // {
-            //     message = $"Azure Functions app is working. {message}";
-            // }
 
             var cloudHospitalBaseUrl = Environment.GetEnvironmentVariable(Constants.ENV_CLOUDHOSPITAL_BASEURL);
             var targetPage = $"{cloudHospitalBaseUrl}/?chat=true";
@@ -198,7 +204,7 @@ AND A.IsHidden = 0
         return null;
     }
 
-    private async Task<HospitalModel> GetHospitalAsync(string hospitalId)
+    private async Task<HospitalModel?> GetHospitalAsync(string hospitalId)
     {
         using (var connection = new SqlConnection(_databaseConfiguration.ConnectionString))
         {
@@ -231,7 +237,8 @@ AND h.Id = @HospitalId
         }
     }
 
-    private string GetHospitalIdFromChannelUrl(string channelUrl)
+    [Obsolete("Use Channel.CustomType")]
+    private string? GetHospitalIdFromChannelUrl(string channelUrl)
     {
         // channel_url 
         // CH: {hospitalId}--{userId}
@@ -269,7 +276,7 @@ AND h.Id = @HospitalId
         return templateData;
     }
 
-    private object? GetTemplateData(UserModel user, SendBirdGroupChannelMessageSendEventModel item, HospitalModel? hospital = null, string? message = null, string? targetPage = null) => item?.Sender?.Metadata?.UserType switch
+    private object? GetTemplateData(UserModel user, SendBirdGroupChannelMessageSendEventModel item, HospitalModel hospital, string? message = null, string? targetPage = null) => item?.Sender?.Metadata?.UserType switch
     {
         SendBirdSenderUserTypes.ChManager => GetChManagerTemplateData(user, item, hospital, message, targetPage),
         SendBirdSenderUserTypes.Manager => GetManagerTemplateData(user, item, hospital, message, targetPage),
@@ -284,10 +291,11 @@ AND h.Id = @HospitalId
     /// <param name="item"></param>
     /// <param name="message"></param>
     /// <returns></returns>
-    private UnreadMessageReminderEmialTemplateData GetChManagerTemplateData(UserModel user, SendBirdGroupChannelMessageSendEventModel item, HospitalModel? hospital = null, string? message = null, string? targetPage = null)
+    private UnreadMessageReminderEmialTemplateData GetChManagerTemplateData(UserModel user, SendBirdGroupChannelMessageSendEventModel item, HospitalModel hospital, string? message = null, string? targetPage = null)
     {
         var logoUrl = Environment.GetEnvironmentVariable(Constants.ENV_LOGO_IMAGE_URL);
         var cloudHospitalUrl = Environment.GetEnvironmentVariable(Constants.ENV_CLOUDHOSPITAL_BASEURL);
+
         var templateData = new UnreadMessageReminderEmialTemplateData
         {
             Logo = logoUrl,
@@ -310,7 +318,7 @@ AND h.Id = @HospitalId
     /// <param name="item"></param>
     /// <param name="message"></param>
     /// <returns></returns>
-    private UnreadMessageReminderEmialTemplateData GetManagerTemplateData(UserModel user, SendBirdGroupChannelMessageSendEventModel item, HospitalModel? hospital = null, string? message = null, string? targetPage = null)
+    private UnreadMessageReminderEmialTemplateData GetManagerTemplateData(UserModel user, SendBirdGroupChannelMessageSendEventModel item, HospitalModel hospital, string? message = null, string? targetPage = null)
     {
         // Manager
         var templateData = new UnreadMessageReminderEmialTemplateData
@@ -344,18 +352,18 @@ public class UnreadMessageReminderEmialTemplateData
         "TargetPage": "@TargetPage"
     }
     */
-    public string Logo { get; set; }
+    public string Logo { get; set; } = string.Empty;
 
-    public string WebsiteUrl { get; set; }
+    public string WebsiteUrl { get; set; } = string.Empty;
 
-    public string HospitalName { get; set; }
+    public string HospitalName { get; set; } = string.Empty;
 
-    public string To { get; set; }
+    public string To { get; set; } = string.Empty;
 
-    public string From { get; set; }
+    public string From { get; set; } = string.Empty;
 
-    public string Message { get; set; }
+    public string Message { get; set; } = string.Empty;
 
-    public DateTime? Created { get; set; }
-    public string TargetPage { get; set; }
+    public DateTime? Created { get; set; } = DateTime.UtcNow;
+    public string TargetPage { get; set; } = string.Empty;
 }
