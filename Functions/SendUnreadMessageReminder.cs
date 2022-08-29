@@ -227,7 +227,6 @@ ON
 and t.LanguageCode = 'en'
 where 
     auditable.IsDeleted = 0
-AND auditable.IsHidden = 0
 AND h.Id = @HospitalId 
             ";
 
