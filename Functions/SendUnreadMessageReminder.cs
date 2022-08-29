@@ -181,7 +181,6 @@ ON
 WHERE
     U.Id = @Id 
 AND A.IsDeleted = 0
-AND A.IsHidden = 0
                 ";
 
                 var users = await connection.QueryAsync<UserModel>(query, new { Id = id });
@@ -227,7 +226,6 @@ ON
 and t.LanguageCode = 'en'
 where 
     auditable.IsDeleted = 0
-AND auditable.IsHidden = 0
 AND h.Id = @HospitalId 
             ";
 
