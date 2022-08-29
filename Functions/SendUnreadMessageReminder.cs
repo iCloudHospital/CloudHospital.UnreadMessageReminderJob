@@ -181,7 +181,6 @@ ON
 WHERE
     U.Id = @Id 
 AND A.IsDeleted = 0
-AND A.IsHidden = 0
                 ";
 
                 var users = await connection.QueryAsync<UserModel>(query, new { Id = id });
