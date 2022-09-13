@@ -49,7 +49,6 @@ public class GroupChannelMessageWebHook : HttpTriggerFunctionBase
             return CreateResponse(req, HttpStatusCode.BadRequest);
         }
 
-
         byte[] payloadBinary = null;
         using (var memoryStream = new MemoryStream())
         {
@@ -131,13 +130,13 @@ public class GroupChannelMessageWebHook : HttpTriggerFunctionBase
     {
         _logger.LogInformation($"⚡️ [group_channel:message_read] HTTP trigger function processed a request.");
 
-        SendBirdGroupChannelMessageSendEventModel model = null;
+        SendBirdGroupChannelMessageReadEventModel model = null;
 
         var response = CreateResponse(req, HttpStatusCode.OK);
 
         try
         {
-            model = JsonSerializer.Deserialize<SendBirdGroupChannelMessageSendEventModel>(payload, _jsonSerializerOptions);
+            model = JsonSerializer.Deserialize<SendBirdGroupChannelMessageReadEventModel>(payload, _jsonSerializerOptions);
         }
         catch
         {
@@ -164,21 +163,48 @@ public class GroupChannelMessageWebHook : HttpTriggerFunctionBase
         var tableClient = await GetTableClient(tableName);
 
         var queryResult = tableClient.QueryAsync<EventTableModel>(filter: $"{nameof(EventTableModel.PartitionKey)} eq '{model.Channel.ChannelUrl}'").AsPages();
-
-        await foreach (var result in queryResult)
+        try
         {
-            foreach (var item in result.Values)
+            await foreach (var result in queryResult)
             {
-                await tableClient.DeleteEntityAsync(item.PartitionKey, item.RowKey);
-
-                if (IsInDebug)
+                foreach (var item in result.Values)
                 {
-                    _logger.LogInformation($"Remove old data. {nameof(EventTableModel.PartitionKey)}={model.Channel.ChannelUrl}");
+                    try
+                    {
+                        var sendEventModel = JsonSerializer.Deserialize<SendBirdGroupChannelMessageSendEventModel>(item.Json, _jsonSerializerOptions);
+
+                        if (sendEventModel == null)
+                        {
+                            throw new Exception($"Fail to deserialize SendEventModel. [{item.PartitionKey}:{item.RowKey}]");
+                        }
+
+                        // Reader is not sender
+                        if (ConfirmToRead(sendEventModel.Sender.UserId, model))
+                        {
+                            await tableClient.DeleteEntityAsync(item.PartitionKey, item.RowKey);
+
+                            if (IsInDebug)
+                            {
+                                _logger.LogInformation($"Remove old data. {nameof(EventTableModel.PartitionKey)}={model.Channel.ChannelUrl}");
+                            }
+                        }
+                    }
+                    catch (Exception ex)
+                    {
+                        _logger.LogWarning(ex, ex.Message);
+
+                        throw;
+                    }
                 }
             }
-        }
 
-        return response;
+            return response;
+        }
+        catch (Exception ex)
+        {
+
+            return CreateResponse(req, HttpStatusCode.InternalServerError, ex.Message);
+        }
     }
 
     private async Task<HttpResponseData> ProcessGroupChannelMessageSend(HttpRequestData req, string payload)
@@ -199,7 +225,6 @@ public class GroupChannelMessageWebHook : HttpTriggerFunctionBase
             return CreateResponse(req, HttpStatusCode.BadRequest);
         }
 
-
         if (model == null)
         {
             _logger.LogWarning("Payload could not deserialize.");
@@ -211,12 +236,10 @@ public class GroupChannelMessageWebHook : HttpTriggerFunctionBase
             _logger.LogInformation($"Payload #1: {payload}");
         }
 
-        var targetUserTypes = new string[] { SendBirdSenderUserTypes.ChManager, SendBirdSenderUserTypes.Manager };
-
-        if (!targetUserTypes.Contains(model.Sender?.Metadata?.UserType))
+        if (!IsMessageToProcess(model))
         {
             // target userType is one of [CHManager, Manager]
-            _logger.LogInformation("✅ Done. The sender is not user type to processing.");
+            _logger.LogInformation("✅ Done. The message that does not concerned is not saving.");
             return response;
         }
 
@@ -324,6 +347,50 @@ Hashed value: {hashedString}
         }
 
         return authorizedRequest;
+    }
+
+    /// <summary>
+    /// Whether to save the message depends on who sent it.
+    /// <list>
+    ///     <item>Sender is CHManager</item>
+    ///     <item>Sender is Manager</item>
+    ///     <item>Sender is User and receiver is not Manager</item>
+    /// </list>
+    /// </summary>
+    /// <param name="model"></param>
+    /// <returns></returns>
+    private bool IsMessageToProcess(SendBirdGroupChannelMessageSendEventModel model)
+    {
+        var senderIsUser = string.IsNullOrWhiteSpace(model.Sender.Metadata?.UserType);
+        if (senderIsUser)
+        {
+            // sender is User and receiver is Manager (Not CHManager)
+            var toManager = model.Members
+                .Where(model => !string.IsNullOrWhiteSpace(model.Metadata?.UserType) && model.Metadata?.UserType == SendBirdSenderUserTypes.Manager)
+                .Any();
+
+            if (toManager)
+            {
+                return false;
+            }
+        }
+
+        return true;
+    }
+
+    private bool ConfirmToRead(string senderUserId, SendBirdGroupChannelMessageReadEventModel model)
+    {
+        if (string.IsNullOrWhiteSpace(senderUserId))
+        {
+            throw new ArgumentException($"{nameof(senderUserId)} does not allow null or empty string.", nameof(senderUserId));
+        }
+
+        if (model == null)
+        {
+            throw new ArgumentException($"{model} does not allow null.", nameof(model));
+        }
+
+        return model.ReadUpdates.Any(x => x.UserId != senderUserId);
     }
 }
 
