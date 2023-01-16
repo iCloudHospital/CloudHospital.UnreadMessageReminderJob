@@ -264,4 +264,187 @@ AND h.Id = @HospitalId
             await connection.CloseAsync();
         }
     }
+
+    public async Task<UserModel?> GetHospitalManager(string hospitalId)
+    {
+        using var connection = new SqlConnection(_databaseConfiguration.ConnectionString);
+        var query = @"select
+    b.Id,
+    b.Email,
+    b.FirstName,
+    b.LastName
+from 
+    ManagerAffiliations a 
+JOIN
+    Users b 
+ON
+    a.ManagerId = b.Id
+JOIN
+    UserAuditableEntities c 
+ON
+    b.Id = c.UserId
+WHERE
+    c.IsDeleted = 0
+and c.IsHidden = 0
+and a.HospitalId = @HospitalId
+ORDER BY
+    c.CreatedDate
+;";
+        var managers = await connection.QueryAsync<UserModel>(query, new { HospitalId = hospitalId });
+
+        return managers.FirstOrDefault();
+    }
+
+    public async Task<ConsultationModel?> GetConsultationAsync(string consultationId)
+    {
+        var queryConsultation = @"
+SELECT
+    consultation.Id,
+    consultation.ConsultationType,
+    consultation.Status,
+    consultation.IsOpen,
+    consultation.PatientId,
+    consultation.ConfirmedDateStart,
+    consultation.HospitalId,
+    hospital.WebSiteUrl as HospitalWebsiteUrl
+FROM
+    Consultations consultation
+Join
+    Hospitals hospital
+on
+    consultation.HospitalId = hospital.Id
+WHERE
+    consultation.IsDeleted  = 0
+AND consultation.IsHidden   = 0
+AND consultation.Id         = @Id 
+";
+
+        ConsultationModel? consultation = null;
+
+        using var connection = new SqlConnection(_databaseConfiguration.ConnectionString);
+        try
+        {
+            var consultations = await connection.QueryAsync<ConsultationModel>(queryConsultation, new { Id = consultationId });
+            consultation = consultations.FirstOrDefault();
+        }
+        finally
+        {
+            await connection.CloseAsync();
+        }
+
+        return consultation;
+    }
+
+    public async Task<bool> HasNotificationConsultationRelatedAsync(string consultationId)
+    {
+        try
+        {
+            var notificationExists = false;
+            var queryNotification = @"
+SELECT
+    CONVERT(nchar(36), Id) as Id,
+    NotificationCode
+FROM 
+    Notifications
+WHERE 
+    NotificationCode     = @NotificationCode 
+AND NotificationTargetId = @NotificationTargetId
+    
+";
+
+            using var connection = new SqlConnection(_databaseConfiguration.ConnectionString);
+            try
+            {
+                var notifications = await connection.QueryAsync<NotificationModel>(queryNotification, new
+                {
+                    NotificationTargetId = consultationId,
+                    NotificationCode = (int)NotificationCode.ConsultationReady,
+                });
+
+                notificationExists = notifications.Any();
+            }
+            finally
+            {
+                await connection.CloseAsync();
+            }
+
+            return notificationExists;
+        }
+        catch (Exception ex)
+        {
+            _logger.LogInformation("❌ Notification query failed");
+            _logger.LogWarning(ex, ex.Message);
+
+            return true;
+        }
+    }
+
+    public async Task<List<UserModel>> GetManagersAsync(bool isHospitalManager, string? hospitalId = null)
+    {
+        IEnumerable<UserModel> queryResults = Enumerable.Empty<UserModel>();
+
+        using var connection = new SqlConnection(_databaseConfiguration.ConnectionString);
+        try
+        {
+            string queryForManager = string.Empty;
+            if (isHospitalManager)
+            {
+                // managers with hospitalId (UserType == 4)
+                queryForManager = @"
+SELECT 
+    u1.Id,
+    u1.LastName,
+    u1.FirstName,
+    '' as Email
+FROM 
+    Users u1
+INNER JOIN 
+    UserAuditableEntities a1
+ON 
+    u1.Id = a1.UserId
+WHERE 
+    u1.UserType = 4
+AND a1.IsDeleted = 0
+AND a1.IsHidden = 0
+AND EXISTS 
+        (
+            SELECT Id 
+            FROM ManagerAffiliations m1
+            WHERE m1.ManagerId = u1.Id
+              and m1.HospitalId = @HospitalId
+        ) 
+";
+
+                queryResults = await connection.QueryAsync<UserModel>(queryForManager, new { HospitalId = hospitalId });
+            }
+            else
+            {
+                // chmanagers (UserType == 5)
+                queryForManager = @"
+SELECT 
+    u1.Id,
+    u1.LastName,
+    u1.FirstName,
+    '' as Email
+FROM 
+    Users u1
+INNER JOIN 
+    UserAuditableEntities a1
+ON 
+    u1.Id = a1.UserId
+Where 
+    u1.UserType = 5
+AND a1.IsDeleted = 0
+AND a1.IsHidden = 0
+";
+                queryResults = await connection.QueryAsync<UserModel>(queryForManager);
+            }
+
+            return queryResults.ToList();
+        }
+        finally
+        {
+            await connection.CloseAsync();
+        }
+    }
 }

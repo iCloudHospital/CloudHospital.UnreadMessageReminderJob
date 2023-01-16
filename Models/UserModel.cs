@@ -1,5 +1,3 @@
-using CloudHospital.UnreadMessageReminderJob.Services;
-
 namespace CloudHospital.UnreadMessageReminderJob.Models;
 
 public class UserModel
@@ -13,9 +11,3 @@ public class UserModel
     public string FullName { get => $"{FirstName} {LastName}"; }
 }
 
-public class DeviceModel
-{
-    public string UserId { get; set; }
-
-    public Platform Platform { get; set; }
-}

@@ -23,11 +23,15 @@ public class Constants
     public const string ENV_CALLING_REMINDER_BASIS = "CallingReminderBasis";
 
     public const string ENV_SENDBIRD_API_KEY = "SendBirdApiKey";
+    public const string ENV_SENDBIRD_APP_ID = "SendBirdAppId";
 
     public const string ENV_NOTIFICATION_HUB_CONNECTION_STRING = "NotificationHubConnectionString";
     public const string ENV_NOTIFICATION_HUB_NAME = "NotificationHubName";
 
+    public const string ENV_HELP_USER_ID = "HelpUserId";
+
     public const string ENV_DEBUG = "Debug";
+
 
     // Unread message reminder
     public const string UNREAD_MESSAGE_REMINDER_QUEUE_NAME = $"%{ENV_UNREAD_MESSAGE_REMINDER_QUEUE_NAME}%%{ENV_STAGE}%";
@@ -56,4 +60,6 @@ public class Constants
     public const string CALLING_REMINDER_HTTP_TRIGGER = "CallingReminderConsultationUpdatedWebHook";
     public const string CALLING_REMINDER_TIMER_TRIGGER = "CallingReminderTimerJob";
     public const string CALLING_REMINDER_QUEUE_TRIGGER = "CallingReminderSendNotification";
+
+
 }

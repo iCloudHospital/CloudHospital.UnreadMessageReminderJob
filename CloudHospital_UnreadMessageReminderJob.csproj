@@ -19,6 +19,7 @@
     <PackageReference Include="Microsoft.Azure.WebJobs.Extensions.Tables" Version="1.0.0" />
     <PackageReference Include="System.Data.SqlClient" Version="4.8.3" />
     <PackageReference Include="StrongGrid" Version="0.84.0" />
+    <PackageReference Include="System.Text.Json" Version="7.0.1" />
   </ItemGroup>
   <ItemGroup>
     <None Update="host.json">
@@ -32,8 +33,9 @@
   <ItemGroup>
     <Using Include="System.Threading.ExecutionContext" Alias="ExecutionContext" />
   </ItemGroup>
-  <ItemGroup>
+  <!-- <ItemGroup>
     <Compile Remove="Functions\GroupChannelMessageReadWebHook.cs" />
-    <Compile Remove="Functions\GroupChannelMessageSendWebHook.cs" />
-  </ItemGroup>
+    <Compile
+  Remove="Functions\GroupChannelMessageSendWebHook.cs" />
+  </ItemGroup> -->
 </Project>
