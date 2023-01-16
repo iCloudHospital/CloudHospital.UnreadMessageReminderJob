@@ -48,11 +48,10 @@ public class CallingReminderConsultationUpdatedWebhook : HttpTriggerFunctionBase
             payloadBinary = memoryStream.ToArray();
 
             memoryStream.Position = 0;
-            using (var reader = new StreamReader(memoryStream))
-            {
-                payload = await reader.ReadToEndAsync();
-                reader.Close();
-            }
+            using var reader = new StreamReader(memoryStream);
+
+            payload = await reader.ReadToEndAsync();
+            reader.Close();
         }
 
         if (IsInDebug)
@@ -66,7 +65,7 @@ public class CallingReminderConsultationUpdatedWebhook : HttpTriggerFunctionBase
             return CreateResponse(req, HttpStatusCode.BadRequest);
         }
 
-        var consultation = JsonSerializer.Deserialize<ConsultationModel>(payload, _jsonSerializerOptions);
+        var consultation = JsonSerializer.Deserialize<Models.ConsultationModel>(payload, _jsonSerializerOptions);
 
         if (consultation == null)
         {

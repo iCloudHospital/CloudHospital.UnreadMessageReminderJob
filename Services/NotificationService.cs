@@ -1,9 +1,7 @@
-using System.Data.SqlClient;
 using System.Text.Json;
 using System.Text.Json.Serialization;
 using CloudHospital.UnreadMessageReminderJob.Models;
 using CloudHospital.UnreadMessageReminderJob.Options;
-using Dapper;
 using Microsoft.Azure.NotificationHubs;
 using Microsoft.Extensions.Logging;
 using Microsoft.Extensions.Options;
@@ -13,36 +11,36 @@ namespace CloudHospital.UnreadMessageReminderJob.Services;
 public class NotificationService
 {
     private readonly NotificationHubClient _notificationHubClient;
-    private readonly DatabaseConfiguration _databaseConfiguration;
     private readonly DebugConfiguration _debugConfiguration;
     private readonly JsonSerializerOptions _jsonSerializerOptions;
+
+    private readonly DatabaseService _databaseService;
     private readonly ILogger<NotificationService> _logger;
 
     public NotificationService(
         IOptions<AzureNotificationHubsConfiguration> azureNotificationHubsConfiguration,
-        IOptionsMonitor<DatabaseConfiguration> databaseConfigurationAccessor,
         IOptionsMonitor<DebugConfiguration> debugConfigurationAccessor,
         IOptionsMonitor<JsonSerializerOptions> jsonSerializerOptionsAccessor,
+        DatabaseService databaseService,
         ILogger<NotificationService> logger
         )
     {
         _notificationHubClient = NotificationHubClient.CreateClientFromConnectionString(azureNotificationHubsConfiguration.Value.AccessSignature, azureNotificationHubsConfiguration.Value.HubName);
-        _databaseConfiguration = databaseConfigurationAccessor.CurrentValue;
         _debugConfiguration = debugConfigurationAccessor.CurrentValue ?? new();
         _jsonSerializerOptions = jsonSerializerOptionsAccessor.CurrentValue;
-
+        _databaseService = databaseService;
         _logger = logger;
     }
 
     public async Task<NotificationModel> SendNotificationAsync(string title, NotificationModel notification, CancellationToken cancellationToken = default)
     {
         // Insert notification 
-        int affected = await InsertNotificationAsync(notification);
+        int affected = await _databaseService.InsertNotificationAsync(notification);
 
         var succeed = affected > 0;
         if (succeed)
         {
-            List<DeviceModel> devices = await GetDevicesAsync(notification.ReceiverId);
+            List<DeviceModel> devices = await _databaseService.GetDevicesAsync(notification.ReceiverId);
 
             var templateData = await GetTemplateDataByNotificationIdAsync(notification.Id);
 
@@ -78,70 +76,7 @@ public class NotificationService
 
     protected async Task<PushNotificationTemplate> GetTemplateDataByNotificationIdAsync(string notificationId, CancellationToken cancellationToken = default)
     {
-        // Query notifications
-        // var notification = await _context.Notifications
-        //     .Include(x => x.Sender)
-        //     .Include(x => x.Receiver)
-        //     .Where(x => x.Id == notificationId)
-        //     .FirstOrDefaultAsync(cancellationToken);
-
-        var connectionString = Environment.GetEnvironmentVariable(Constants.AZURE_SQL_DATABASE_CONNECTION);
-        var query = @"
-SELECT
-    CONVERT(nchar(36), notification.Id) as Id,
-    notification.NotificationCode,
-    CONVERT(nchar(36), notification.NotificationTargetId) as NotificationTargetId,
-    
-    notification.Message,
-    notification.CreatedAt,
-    notification.IsChecked,
-    
-    notification.SenderId,
-    sender.FirstName,
-    sender.LastName,
-    sender.Email,
-
-    notification.ReceiverId,
-    receiver.FirstName,
-    receiver.LastName,
-    receiver.Email
-FROM
-    Notifications as notification
-LEFT JOIN 
-    Users as sender
-ON 
-    notification.SenderId = sender.Id
-LEFT JOIN 
-    Users as receiver
-ON 
-    notification.ReceiverId = receiver.Id
-WHERE
-    notification.Id = @Id
-";
-        NotificationModel notification = null;
-        using (var connection = new SqlConnection(connectionString))
-        {
-            var notifications = await connection
-                .QueryAsync<NotificationModel, UserModel, UserModel, NotificationModel>(
-                    sql: query,
-                    map: (notification, sender, receiver) =>
-                    {
-                        if (sender != null)
-                        {
-                            notification.Sender = sender;
-                        }
-                        if (receiver != null)
-                        {
-                            notification.Receiver = receiver;
-                        }
-
-                        return notification;
-                    },
-                    param: new { Id = notificationId },
-                    splitOn: "Id, SenderId, ReceiverId");
-
-            notification = notifications?.FirstOrDefault();
-        }
+        var notification = await _databaseService.GetNotificationById(notificationId);
 
         if (notification == null)
         {
@@ -224,89 +159,6 @@ WHERE
         catch (Exception ex)
         {
             _logger.LogError(ex, "Push Notification error");
-        }
-    }
-
-    private async Task<int> InsertNotificationAsync(NotificationModel notification)
-    {
-        var affected = 0;
-        var queryInsertNotification = @"
-INSERT INTO Notifications
-(
-    Id,
-    NotificationCode,
-    NotificationTargetId,
-    SenderId,
-    ReceiverId,
-    Message,
-    CreatedAt,
-    IsChecked,
-    IsDeleted
-)
-VALUES 
-(
-    @Id,
-    @NotificationCode,
-    @NotificationTargetId,
-    @SenderId,
-    @ReceiverId,
-    @Message,
-    @CreatedAt,
-    @IsChecked,
-    @IsDeleted
-)
-        ";
-        using (var connection = new SqlConnection(_databaseConfiguration.ConnectionString))
-        {
-            affected = await connection.ExecuteAsync(queryInsertNotification, new
-            {
-                Id = notification.Id,
-                NotificationCode = (int)notification.NotificationCode,
-                NotificationTargetId = notification.NotificationTargetId,
-                SenderId = notification.SenderId,
-                ReceiverId = notification.ReceiverId,
-                Message = notification.Message,
-                CreatedAt = notification.CreatedAt,
-                IsChecked = notification.IsChecked,
-                IsDeleted = notification.IsDeleted,
-            });
-        }
-
-        _logger.LogInformation("🔨 Notification inserted. affected={affected}", affected);
-
-        return affected;
-    }
-
-    private async Task<List<DeviceModel>> GetDevicesAsync(string receiverId)
-    {
-        // var devices = await _context.Devices
-        //     .Where(x => x.AuditableEntity != null && x.AuditableEntity.IsDeleted == false && x.AuditableEntity.IsHidden == false)
-        //     .Where(x => x.UserId == notification.ReceiverId)
-        //     .ToListAsync(cancellationToken);
-
-        var queryDevices = @"
-SELECT
-    device.UserId,
-    device.Platform
-FROM
-    Devices device
-INNER JOIN 
-    DeviceAuditableEntities auditable
-ON
-    device.Id = auditable.DeviceId
-WHERE
-    auditable.IsDeleted = 0
-AND auditable.IsHidden  = 0
-AND device.UserId       = @UserId
-";
-
-        using (var connection = new SqlConnection(_databaseConfiguration.ConnectionString))
-        {
-            var result = await connection.QueryAsync<DeviceModel>(queryDevices, new { UserId = receiverId });
-
-            _logger.LogInformation("🔨 devices query result={count}", result.Count());
-
-            return result.ToList();
         }
     }
 }

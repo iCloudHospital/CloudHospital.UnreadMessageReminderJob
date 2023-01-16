@@ -1,11 +1,7 @@
-using System;
-using System.Data.SqlClient;
-using System.Linq;
 using System.Text.Json;
 using CloudHospital.UnreadMessageReminderJob.Models;
 using CloudHospital.UnreadMessageReminderJob.Options;
 using CloudHospital.UnreadMessageReminderJob.Services;
-using Dapper;
 using Microsoft.Azure.Functions.Worker;
 using Microsoft.Extensions.Logging;
 using Microsoft.Extensions.Options;
@@ -15,20 +11,20 @@ namespace CloudHospital.UnreadMessageReminderJob;
 public class SendUnreadMessageReminder : FunctionBase
 {
     private readonly EmailSender _emailSender;
-    private readonly DatabaseConfiguration _databaseConfiguration;
+    private readonly DatabaseService _databaseService;
     private readonly JsonSerializerOptions _jsonSerializerOptions;
     private readonly ILogger _logger;
 
     public SendUnreadMessageReminder(
         IOptionsMonitor<DebugConfiguration> debugConfigurationAccessor,
-        IOptionsMonitor<DatabaseConfiguration> databaseConfigurationAccessor,
         IOptionsMonitor<JsonSerializerOptions> jsonSerializerOptionsAccessor,
         EmailSender emailSender,
+        DatabaseService databaseService,
         ILoggerFactory loggerFactory)
         : base(debugConfigurationAccessor)
     {
         _emailSender = emailSender;
-        _databaseConfiguration = databaseConfigurationAccessor.CurrentValue;
+        _databaseService = databaseService;
         _jsonSerializerOptions = jsonSerializerOptionsAccessor.CurrentValue;
         _logger = loggerFactory.CreateLogger<SendUnreadMessageReminder>();
     }
@@ -93,8 +89,8 @@ public class SendUnreadMessageReminder : FunctionBase
                 _logger.LogInformation("🔨 userId={userId}, hospitalId={hospitalId}, userTypeForTemplate={userType}", userId, hospitalId, userTypeForTemplate);
             }
 
-            var user = await GetUser(userId);
-            var hospital = await GetHospitalAsync(hospitalId);
+            var user = await _databaseService.GetUser(userId);
+            var hospital = await _databaseService.GetHospitalAsync(hospitalId);
 
             if (user == null)
             {
@@ -155,97 +151,12 @@ website: {website}
         }
     }
 
-    private async Task<UserModel?> GetUser(string? id)
-    {
-        if (string.IsNullOrWhiteSpace(id))
-        {
-            _logger.LogWarning("User id is empty.");
-
-            return null;
-        }
-
-        using (var connection = new SqlConnection(_databaseConfiguration.ConnectionString))
-        {
-            try
-            {
-                await connection.OpenAsync();
-                var query = @"
-SELECT
-    top 1
-    Id,
-    FirstName,
-    LastName,
-    Email
-FROM
-    Users U 
-INNER JOIN
-    UserAuditableEntities A 
-ON
-    U.Id = A.UserId    
-WHERE
-    U.Id = @Id 
-AND A.IsDeleted = 0
-                ";
-
-                var users = await connection.QueryAsync<UserModel>(query, new { Id = id });
-
-                if (users != null && users.Any())
-                {
-                    var foundUser = users.FirstOrDefault();
-                    if (foundUser != null)
-                    {
-                        return foundUser;
-                    }
-                }
-            }
-            finally
-            {
-                await connection.CloseAsync();
-            }
-        }
-
-        return null;
-    }
-
-    private async Task<HospitalModel?> GetHospitalAsync(string hospitalId)
-    {
-        using (var connection = new SqlConnection(_databaseConfiguration.ConnectionString))
-        {
-            var query = @"
-SELECT 
-    h.Id,
-    h.Logo,
-    h.WebsiteUrl,
-    t.Name
-FROM 
-    Hospitals h 
-INNER JOIN 
-    HospitalAuditableEntities auditable
-ON
-    h.Id = auditable.HospitalId
-INNER JOIN 
-    HospitalTranslations t 
-ON
-    h.Id = t.HospitalId
-and t.LanguageCode = 'en'
-where 
-    auditable.IsDeleted = 0
-AND h.Id = @HospitalId 
-            ";
-
-            var hospitals = await connection.QueryAsync<HospitalModel>(query, new { HospitalId = hospitalId });
-
-            return hospitals.FirstOrDefault();
-        }
-    }
-
     private object? GetTemplateData(string userTypeForTemplate, UserModel user, SendBirdGroupChannelMessageSendEventModel item, HospitalModel hospital, string? message = null, string? targetPage = null) => userTypeForTemplate switch
     {
         SendBirdSenderUserTypes.ChManager => GetChManagerTemplateData(user, item, hospital, message, targetPage),
         SendBirdSenderUserTypes.Manager => GetManagerTemplateData(user, item, hospital, message, targetPage),
         _ => null,
     };
-
 
     /// <summary>
     /// ChManager

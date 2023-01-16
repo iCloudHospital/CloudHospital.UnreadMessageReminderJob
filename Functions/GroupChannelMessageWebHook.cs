@@ -1,14 +1,15 @@
-﻿using System.IO;
-using System.Net;
+﻿using System.Net;
 using System.Security.Cryptography;
 using System.Text;
 using System.Text.Json;
+using System.Linq;
 using CloudHospital.UnreadMessageReminderJob.Models;
 using CloudHospital.UnreadMessageReminderJob.Options;
 using Microsoft.Azure.Functions.Worker;
 using Microsoft.Azure.Functions.Worker.Http;
 using Microsoft.Extensions.Logging;
 using Microsoft.Extensions.Options;
+using CloudHospital.UnreadMessageReminderJob.Services;
 
 namespace CloudHospital.UnreadMessageReminderJob;
 
@@ -19,14 +20,25 @@ public class GroupChannelMessageWebHook : HttpTriggerFunctionBase
 {
     private readonly ILogger _logger;
     private readonly JsonSerializerOptions _jsonSerializerOptions;
+    private readonly AccountConfiguration _accountConfiguration;
+    private readonly SendbirdService _sendbirdService;
+    private readonly DatabaseService _databaseService;
 
     public GroupChannelMessageWebHook(
         IOptionsMonitor<DebugConfiguration> debugConfigurationAccessor,
         IOptionsMonitor<JsonSerializerOptions> jsonSerializerOptionsAccessor,
+        IOptionsMonitor<AccountConfiguration> accountConfigurationAccess,
+        SendbirdService sendbirdService,
+        DatabaseService databaseService,
         ILoggerFactory loggerFactory)
         : base(debugConfigurationAccessor)
     {
         _jsonSerializerOptions = jsonSerializerOptionsAccessor.CurrentValue;
+        _accountConfiguration = accountConfigurationAccess.CurrentValue;
+
+        _sendbirdService = sendbirdService;
+        _databaseService = databaseService;
+
         _logger = loggerFactory.CreateLogger<GroupChannelMessageWebHook>();
     }
 
@@ -241,6 +253,55 @@ public class GroupChannelMessageWebHook : HttpTriggerFunctionBase
             // target userType is one of [CHManager, Manager]
             _logger.LogInformation("✅ Done. The message that does not concerned is not saving.");
             return response;
+        }
+
+        if (!model.Members.Any(x => x.UserId != model.Sender.UserId))
+        {
+            // When model members contains sender only, Add help account to group channel.
+            // Related:
+            // - https://github.com/iCloudHospital/CloudHospital.UnreadMessageReminderJob/issues/29
+            // - https://github.com/iCloudHospital/CloudHospital.Api/issues/2103
+            // - https://github.com/iCloudHospital/cloudhospital.admin/issues/841
+
+            var hospitalId = model.Channel.CustomType ?? string.Empty;
+            string? managerId = null;
+
+            if (!string.IsNullOrWhiteSpace(hospitalId))
+            {
+                var hospital = await _databaseService.GetHospitalAsync(hospitalId);
+                if (!string.IsNullOrWhiteSpace(hospital?.WebsiteUrl?.Trim()))
+                {
+                    var manager = await _databaseService.GetHospitalManager(hospital.Id);
+                    managerId = manager?.Id;
+                }
+            }
+
+            if (string.IsNullOrWhiteSpace(managerId))
+            {
+                managerId = _accountConfiguration.HelpUserId;
+            }
+
+            try
+            {
+                await _sendbirdService.InviteGroupChannelV3Async(model.Channel.ChannelUrl, new InviteAsMembersModel
+                {
+                    UserIds = new string[]
+                    {
+                        managerId
+                    },
+                });
+
+                _logger.LogInformation("✅ Invite hospital manager to group channel. channel={channelUrl};manager={managerId}",
+                    model.Channel.ChannelUrl,
+                    managerId);
+            }
+            catch (Exception ex)
+            {
+                _logger.LogWarning(ex, "❌ Fail to invite manager to group channel. channel={channelUrl};manager={managerId};message={message}",
+                    model.Channel.ChannelUrl,
+                    managerId,
+                    ex.Message);
+            }
         }
 
         var entry = new EventTableModel
