@@ -12,7 +12,8 @@
     <PackageReference Include="Microsoft.Azure.Functions.Worker" Version="1.8.0" />
     <PackageReference Include="Microsoft.Azure.Functions.Worker.Extensions.Http" Version="3.0.13" />
     <PackageReference Include="Microsoft.Azure.Functions.Worker.Extensions.Storage" Version="5.0.0" />
-    <PackageReference Include="Microsoft.Azure.Functions.Worker.Extensions.Storage.Queues" Version="5.0.0" />
+    <PackageReference Include="Microsoft.Azure.Functions.Worker.Extensions.Storage.Queues"
+      Version="5.0.0" />
     <PackageReference Include="Microsoft.Azure.Functions.Worker.Extensions.Timer" Version="4.0.1" />
     <PackageReference Include="Microsoft.Azure.Functions.Worker.Sdk" Version="1.3.0" />
     <PackageReference Include="Microsoft.Azure.NotificationHubs" Version="4.1.0" />
@@ -33,9 +34,4 @@
   <ItemGroup>
     <Using Include="System.Threading.ExecutionContext" Alias="ExecutionContext" />
   </ItemGroup>
-  <!-- <ItemGroup>
-    <Compile Remove="Functions\GroupChannelMessageReadWebHook.cs" />
-    <Compile
-  Remove="Functions\GroupChannelMessageSendWebHook.cs" />
-  </ItemGroup> -->
 </Project>
