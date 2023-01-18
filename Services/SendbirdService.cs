@@ -64,11 +64,6 @@ public class SendbirdService
 
         HttpRequestMessage request = new(method, url);
 
-        if (request.Headers.Contains("Content-Type"))
-        {
-            request.Headers.Remove("Content-Type");
-        }
-        request.Headers.Add("Content-Type", "application/json; charset=utf8");
         request.Headers.Add("Api-Token", _sendbirdConfiguration.ApiKey);
 
         if (payload != null)
