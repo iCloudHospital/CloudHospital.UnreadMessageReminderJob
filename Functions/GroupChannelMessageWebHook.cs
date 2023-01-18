@@ -49,7 +49,7 @@ public class GroupChannelMessageWebHook : HttpTriggerFunctionBase
     {
         _logger.LogInformation($"⚡️ [{nameof(GroupChannelMessageWebHook)}] HTTP trigger function processed a request.");
 
-        SendBirdGroupChannelEventModel model = null;
+        SendBirdGroupChannelEventModel? model = null;
 
         var response = CreateResponse(req, HttpStatusCode.OK);
 
@@ -61,7 +61,7 @@ public class GroupChannelMessageWebHook : HttpTriggerFunctionBase
             return CreateResponse(req, HttpStatusCode.BadRequest);
         }
 
-        byte[] payloadBinary = null;
+        byte[]? payloadBinary = null;
         using (var memoryStream = new MemoryStream())
         {
             req.Body.Position = 0;
@@ -124,7 +124,6 @@ public class GroupChannelMessageWebHook : HttpTriggerFunctionBase
         if (model.Category == SendBirdGroupChannelEventCategories.MessageRead)
         {
             return await ProcessGroupChannelMessageRead(req, payload);
-
         }
         else if (model.Category == SendBirdGroupChannelEventCategories.MessageSend)
         {
@@ -142,7 +141,7 @@ public class GroupChannelMessageWebHook : HttpTriggerFunctionBase
     {
         _logger.LogInformation($"⚡️ [group_channel:message_read] HTTP trigger function processed a request.");
 
-        SendBirdGroupChannelMessageReadEventModel model = null;
+        SendBirdGroupChannelMessageReadEventModel? model = null;
 
         var response = CreateResponse(req, HttpStatusCode.OK);
 
@@ -223,7 +222,7 @@ public class GroupChannelMessageWebHook : HttpTriggerFunctionBase
     {
         _logger.LogInformation($"⚡️ [group_channel:message_send] HTTP trigger function processed a request.");
 
-        SendBirdGroupChannelMessageSendEventModel model = null;
+        SendBirdGroupChannelMessageSendEventModel? model = null;
 
         var response = CreateResponse(req, HttpStatusCode.OK);
 
