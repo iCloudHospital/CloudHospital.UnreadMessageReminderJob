@@ -460,7 +460,11 @@ Hashed value: {hashedString}
             return false;
         }
 
-        var ich = new string[] { "https://icloudhospital.com" };
+        var ich = new string[] {
+            "https://icloudhospital.com",
+            "https://int.icloudhospital.com"
+        };
+
         var hospitalWebSiteUrl = hospital.WebsiteUrl?.ToLower().Trim();
 
         if (string.IsNullOrWhiteSpace(hospitalWebSiteUrl))
