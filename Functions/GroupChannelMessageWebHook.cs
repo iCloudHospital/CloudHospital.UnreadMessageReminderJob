@@ -268,7 +268,7 @@ public class GroupChannelMessageWebHook : HttpTriggerFunctionBase
             if (!string.IsNullOrWhiteSpace(hospitalId))
             {
                 var hospital = await _databaseService.GetHospitalAsync(hospitalId);
-                if (!string.IsNullOrWhiteSpace(hospital?.WebsiteUrl?.Trim()))
+                if (hospital != null && IsSaasClient(hospital))
                 {
                     var manager = await _databaseService.GetHospitalManager(hospital.Id);
                     managerId = manager?.Id;
@@ -451,6 +451,29 @@ Hashed value: {hashedString}
         }
 
         return model.ReadUpdates.Any(x => x.UserId != senderUserId);
+    }
+
+    private bool IsSaasClient(HospitalModel? hospital)
+    {
+        if (hospital == null)
+        {
+            return false;
+        }
+
+        var ich = new string[] { "https://icloudhospital.com" };
+        var hospitalWebSiteUrl = hospital.WebsiteUrl?.ToLower().Trim();
+
+        if (string.IsNullOrWhiteSpace(hospitalWebSiteUrl))
+        {
+            return false;
+        }
+
+        if (ich.Contains(hospitalWebSiteUrl))
+        {
+            return false;
+        }
+
+        return true;
     }
 }
 
