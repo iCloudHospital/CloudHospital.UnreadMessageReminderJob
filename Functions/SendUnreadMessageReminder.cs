@@ -228,18 +228,18 @@ website: {website}
 
         try
         {
-            await _sendbirdService.InviteGroupChannelV3Async(item.Channel.ChannelUrl, new InviteAsMembersModel
+            await _sendbirdService.LeaveGroupChannelV3Async(item.Channel.ChannelUrl, new LeaveMembersGroupChannelModel
             {
                 UserIds = managerIds,
             }, cancellationToken);
 
-            _logger.LogInformation("✅ Invite hospital manager to group channel. channel={channelUrl};manager={managerId}",
+            _logger.LogInformation("✅ hospital manager leaves in the group channel. channel={channelUrl};manager={managerId}",
                 item.Channel.ChannelUrl,
                 string.Join(", ", managerIds));
         }
         catch (Exception ex)
         {
-            _logger.LogWarning(ex, "❌ Fail to invite manager to group channel. channel={channelUrl};manager={managerId};message={message}",
+            _logger.LogWarning(ex, "❌ Fail to leave manager to group channel. channel={channelUrl};manager={managerId};message={message}",
                 item.Channel.ChannelUrl,
                 string.Join(", ", managerIds),
                 ex.Message);
