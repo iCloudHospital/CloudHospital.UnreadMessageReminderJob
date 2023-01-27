@@ -58,6 +58,39 @@ Payload: {Json}
         _logger.LogInformation("User invitation succeed.");
     }
 
+    public async Task LeaveGroupChannelV3Async(string channelUrl, LeaveMembersGroupChannelModel model, CancellationToken cancellationToken = default)
+    {
+        if (string.IsNullOrWhiteSpace(channelUrl))
+        {
+            throw new SendbirdApiException("Channel url that leaves is required");
+        }
+
+        // https://sendbird.com/docs/chat/v3/platform-api/channel/managing-a-channel/leave-a-channel
+        var url = $"{GetBaseUrl()}/v3/group_channels/{Uri.EscapeDataString(channelUrl)}/leave";
+        var client = CreateHttpClient();
+        var httpRequestMessage = CreateHttpRequestMessage(HttpMethod.Post, url, model);
+
+        _logger.LogInformation(@"Request: 
+ApiKey: {ApiKey}        
+ChannelUrl: {ChannelUrl}
+Payload: {Json}
+        ", string.IsNullOrWhiteSpace(_sendbirdConfiguration.ApiKey) ? "Not set" : "*****",
+        channelUrl,
+        JsonSerializer.Serialize(model, _jsonSerializerOptions));
+
+        var response = await client.SendAsync(httpRequestMessage, cancellationToken: cancellationToken);
+
+        var responseBodyString = await response.Content.ReadAsStringAsync(cancellationToken);
+
+        if (!response.IsSuccessStatusCode)
+        {
+            _logger.LogWarning("Fail to leave user: {message}", responseBodyString);
+            throw new SendbirdApiException($"Fail to leave user: {responseBodyString}");
+        }
+
+        _logger.LogInformation("User to leave group channel succeed.");
+    }
+
     private HttpClient CreateHttpClient() => new()
     {
         Timeout = TimeSpan.FromSeconds(5),
@@ -120,6 +153,12 @@ public class SendbirdApiException : Exception
 }
 
 public class InviteAsMembersModel
+{
+    [JsonPropertyName("user_ids")]
+    public IEnumerable<string> UserIds { get; set; } = Enumerable.Empty<string>();
+}
+
+public class LeaveMembersGroupChannelModel
 {
     [JsonPropertyName("user_ids")]
     public IEnumerable<string> UserIds { get; set; } = Enumerable.Empty<string>();
