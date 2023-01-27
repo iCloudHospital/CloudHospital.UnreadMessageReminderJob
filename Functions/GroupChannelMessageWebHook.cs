@@ -254,6 +254,9 @@ public class GroupChannelMessageWebHook : HttpTriggerFunctionBase
             return response;
         }
 
+        // Feature changing: 
+        // Hospital manager leaves in the group channel when mail sent.
+        // #35
         if (!model.Members.Any(x => x.UserId != model.Sender.UserId))
         {
             // When model members contains sender only, Add help account to group channel.
