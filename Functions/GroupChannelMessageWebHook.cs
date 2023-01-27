@@ -254,59 +254,6 @@ public class GroupChannelMessageWebHook : HttpTriggerFunctionBase
             return response;
         }
 
-        // Feature changing: 
-        // Hospital manager leaves in the group channel when mail sent.
-        // #35
-        // TODO: Remove this block
-        if (!model.Members.Any(x => x.UserId != model.Sender.UserId))
-        {
-            // When model members contains sender only, Add help account to group channel.
-            // Related:
-            // - https://github.com/iCloudHospital/CloudHospital.UnreadMessageReminderJob/issues/29
-            // - https://github.com/iCloudHospital/CloudHospital.Api/issues/2103
-            // - https://github.com/iCloudHospital/cloudhospital.admin/issues/841
-
-            var hospitalId = model.Channel.CustomType ?? string.Empty;
-            string? managerId = null;
-
-            if (!string.IsNullOrWhiteSpace(hospitalId))
-            {
-                var hospital = await _databaseService.GetHospitalAsync(hospitalId);
-                if (hospital != null && IsSaasClient(hospital))
-                {
-                    var manager = await _databaseService.GetHospitalManager(hospital.Id);
-                    managerId = manager?.Id;
-                }
-            }
-
-            if (string.IsNullOrWhiteSpace(managerId))
-            {
-                managerId = _accountConfiguration.HelpUserId;
-            }
-
-            try
-            {
-                await _sendbirdService.InviteGroupChannelV3Async(model.Channel.ChannelUrl, new InviteAsMembersModel
-                {
-                    UserIds = new string[]
-                    {
-                        managerId
-                    },
-                });
-
-                _logger.LogInformation("✅ Invite hospital manager to group channel. channel={channelUrl};manager={managerId}",
-                    model.Channel.ChannelUrl,
-                    managerId);
-            }
-            catch (Exception ex)
-            {
-                _logger.LogWarning(ex, "❌ Fail to invite manager to group channel. channel={channelUrl};manager={managerId};message={message}",
-                    model.Channel.ChannelUrl,
-                    managerId,
-                    ex.Message);
-            }
-        }
-
         var entry = new EventTableModel
         {
             PartitionKey = model.Channel.ChannelUrl,
