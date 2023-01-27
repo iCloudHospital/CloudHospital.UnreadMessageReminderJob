@@ -25,7 +25,7 @@ public class SendbirdService
         _logger = loggerFactory.CreateLogger<SendbirdService>();
     }
 
-    public async Task InviteGroupChannelV3Async(string channelUrl, InviteAsMembersModel model)
+    public async Task InviteGroupChannelV3Async(string channelUrl, InviteAsMembersModel model, CancellationToken cancellationToken = default)
     {
         if (string.IsNullOrWhiteSpace(channelUrl))
         {
@@ -37,22 +37,31 @@ public class SendbirdService
         var client = CreateHttpClient();
         var httpRequestMessage = CreateHttpRequestMessage(HttpMethod.Post, url, model);
 
-        var response = await client.SendAsync(httpRequestMessage);
+        _logger.LogInformation(@"Request: 
+ApiKey: {ApiKey}        
+ChannelUrl: {ChannelUrl}
+Payload: {Json}
+        ", string.IsNullOrWhiteSpace(_sendbirdConfiguration.ApiKey) ? "Not set" : "*****",
+        channelUrl,
+        JsonSerializer.Serialize(model, _jsonSerializerOptions));
 
-        var responseBodyString = await response.Content.ReadAsStringAsync();
+        var response = await client.SendAsync(httpRequestMessage, cancellationToken: cancellationToken);
+
+        var responseBodyString = await response.Content.ReadAsStringAsync(cancellationToken);
 
         if (!response.IsSuccessStatusCode)
         {
+            _logger.LogWarning("Fail to invite user: {message}", responseBodyString);
             throw new SendbirdApiException($"Fail to invite user: {responseBodyString}");
         }
+
+        _logger.LogInformation("User invitation succeed.");
     }
 
-    private HttpClient CreateHttpClient()
+    private HttpClient CreateHttpClient() => new()
     {
-        HttpClient client = new();
-
-        return client;
-    }
+        Timeout = TimeSpan.FromSeconds(5),
+    };
 
     private HttpRequestMessage CreateHttpRequestMessage<TPayload>(HttpMethod method, string url, TPayload? payload = null)
         where TPayload : class, new()

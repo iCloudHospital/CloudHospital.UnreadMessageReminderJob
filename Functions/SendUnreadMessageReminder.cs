@@ -13,6 +13,7 @@ public class SendUnreadMessageReminder : FunctionBase
     private readonly EmailSender _emailSender;
     private readonly DatabaseService _databaseService;
     private readonly JsonSerializerOptions _jsonSerializerOptions;
+    private readonly SendbirdService _sendbirdService;
     private readonly ILogger _logger;
 
     public SendUnreadMessageReminder(
@@ -20,12 +21,14 @@ public class SendUnreadMessageReminder : FunctionBase
         IOptionsMonitor<JsonSerializerOptions> jsonSerializerOptionsAccessor,
         EmailSender emailSender,
         DatabaseService databaseService,
+        SendbirdService sendbirdService,
         ILoggerFactory loggerFactory)
         : base(debugConfigurationAccessor)
     {
         _emailSender = emailSender;
         _databaseService = databaseService;
         _jsonSerializerOptions = jsonSerializerOptionsAccessor.CurrentValue;
+        _sendbirdService = sendbirdService;
         _logger = loggerFactory.CreateLogger<SendUnreadMessageReminder>();
     }
 
@@ -34,6 +37,9 @@ public class SendUnreadMessageReminder : FunctionBase
         [QueueTrigger(Constants.UNREAD_MESSAGE_REMINDER_QUEUE_NAME, Connection = Constants.AZURE_STORAGE_ACCOUNT_CONNECTION)]
             SendBirdGroupChannelMessageSendEventModel item)
     {
+        CancellationTokenSource cancellationTokenSource = new(TimeSpan.FromSeconds(10));
+        var cancellationToken = cancellationTokenSource.Token;
+
         var logMessage = string.Empty;
         _logger.LogInformation($"⚡️ Dequeue item: {nameof(SendBirdGroupChannelMessageSendEventModel.Channel.ChannelUrl)}={item.Channel.ChannelUrl} {nameof(SendBirdGroupChannelMessageSendEventModel.Payload.MessageId)}={item.Payload.MessageId}");
 
@@ -143,9 +149,12 @@ website: {website}
 ", JsonSerializer.Serialize(templateData, _jsonSerializerOptions));
                     }
 
-                    await _emailSender.SendEmailAsync(user.Email, user.FullName, emailTemplateId, templateData);
+                    await _emailSender.SendEmailAsync(user.Email, user.FullName, emailTemplateId, templateData, cancellationToken);
 
                     _logger.LogInformation("✅ Unread message reminder job completed.");
+
+                    // Hospital manager will leave in the channel #35
+                    await LeaveGroupChannelAsync(item, cancellationToken);
                 }
             }
         }
@@ -208,6 +217,53 @@ website: {website}
         };
 
         return templateData;
+    }
+
+    private async Task LeaveGroupChannelAsync(SendBirdGroupChannelMessageSendEventModel item, CancellationToken cancellationToken = default)
+    {
+        var managerIds = item.Members
+            .Where(member => IsManagerUserType(member.Metadata?.UserType))
+            .Select(member => member.UserId)
+            .ToArray();
+
+        try
+        {
+            await _sendbirdService.InviteGroupChannelV3Async(item.Channel.ChannelUrl, new InviteAsMembersModel
+            {
+                UserIds = managerIds,
+            }, cancellationToken);
+
+            _logger.LogInformation("✅ Invite hospital manager to group channel. channel={channelUrl};manager={managerId}",
+                item.Channel.ChannelUrl,
+                string.Join(", ", managerIds));
+        }
+        catch (Exception ex)
+        {
+            _logger.LogWarning(ex, "❌ Fail to invite manager to group channel. channel={channelUrl};manager={managerId};message={message}",
+                item.Channel.ChannelUrl,
+                string.Join(", ", managerIds),
+                ex.Message);
+        }
+    }
+
+    private bool IsManagerUserType(string? userType)
+    {
+        if (string.IsNullOrWhiteSpace(userType))
+        {
+            return false;
+        }
+
+        if (userType.Equals(SendBirdSenderUserTypes.ChManager, StringComparison.OrdinalIgnoreCase))
+        {
+            return true;
+        }
+
+        if (userType.Equals(SendBirdSenderUserTypes.Manager, StringComparison.OrdinalIgnoreCase))
+        {
+            return true;
+        }
+
+        return false;
     }
 }
 
