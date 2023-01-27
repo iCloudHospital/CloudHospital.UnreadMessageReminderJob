@@ -134,7 +134,7 @@ public class NotificationService
 
             var jsonData = JsonSerializer.Serialize(data, jsonOptions);
 
-            NotificationOutcome outcome = null;
+            NotificationOutcome outcome;
 
             switch (platform)
             {
@@ -146,6 +146,8 @@ public class NotificationService
                     jsonPayload = "{\"data\": {\"message\":\"" + title + "\", \"body\":\"" + body + "\"}, \"data\":" + jsonData + "}";
                     outcome = await _notificationHubClient.SendFcmNativeNotificationAsync(jsonPayload, tags, cancellationToken);
                     break;
+                default:
+                    throw new Exception("Not support platform");
             }
 
             if (outcome != null)
