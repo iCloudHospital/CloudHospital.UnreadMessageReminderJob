@@ -370,24 +370,24 @@ Hashed value: {hashedString}
     /// </summary>
     /// <param name="model"></param>
     /// <returns></returns>
-private bool IsMessageToProcess(SendBirdGroupChannelMessageSendEventModel model)
-{
-    var senderIsUser = string.IsNullOrWhiteSpace(model.Sender.Metadata?.UserType);
-    if (senderIsUser)
+    private bool IsMessageToProcess(SendBirdGroupChannelMessageSendEventModel model)
     {
-        // sender is User and receiver is Manager (Not CHManager)
-        var toManager = model.Members
-            .Where(model => !string.IsNullOrWhiteSpace(model.Metadata?.UserType) && model.Metadata?.UserType == SendBirdSenderUserTypes.Manager)
-            .Any();
-
-        if (toManager)
+        var senderIsUser = string.IsNullOrWhiteSpace(model.Sender.Metadata?.UserType);
+        if (senderIsUser)
         {
-            return false;
-        }
-    }
+            // sender is User and receiver is Manager (Not CHManager)
+            var toManager = model.Members
+                .Where(model => !string.IsNullOrWhiteSpace(model.Metadata?.UserType) && model.Metadata?.UserType == SendBirdSenderUserTypes.Manager)
+                .Any();
 
-    return true;
-}
+            if (toManager)
+            {
+                return false;
+            }
+        }
+
+        return true;
+    }
 
     private bool ConfirmToRead(string senderUserId, SendBirdGroupChannelMessageReadEventModel model)
     {
