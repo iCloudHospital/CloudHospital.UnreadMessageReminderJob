@@ -68,7 +68,7 @@ Payload: {Json}
         // https://sendbird.com/docs/chat/v3/platform-api/channel/managing-a-channel/leave-a-channel
         var url = $"{GetBaseUrl()}/v3/group_channels/{Uri.EscapeDataString(channelUrl)}/leave";
         var client = CreateHttpClient();
-        var httpRequestMessage = CreateHttpRequestMessage(HttpMethod.Post, url, model);
+        var httpRequestMessage = CreateHttpRequestMessage(HttpMethod.Put, url, model);
 
         _logger.LogInformation(@"Request: 
 ApiKey: {ApiKey}        
