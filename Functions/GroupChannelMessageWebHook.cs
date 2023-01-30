@@ -92,6 +92,9 @@ public class GroupChannelMessageWebHook : HttpTriggerFunctionBase
         try
         {
             var verifiedRequest = VerifySendBirdSignature(req, payloadBinary, IsInDebug);
+#if DEBUG
+            verifiedRequest = DebugConfiguration.BypassPayloadValidation || verifiedRequest;
+#endif
 
             if (!verifiedRequest)
             {

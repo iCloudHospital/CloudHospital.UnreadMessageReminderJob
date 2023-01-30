@@ -32,6 +32,8 @@ public class Constants
 
     public const string ENV_DEBUG = "Debug";
 
+    public const string ENV_BypassPayloadValidation = "BypassPayloadValidation";
+
 
     // Unread message reminder
     public const string UNREAD_MESSAGE_REMINDER_QUEUE_NAME = $"%{ENV_UNREAD_MESSAGE_REMINDER_QUEUE_NAME}%%{ENV_STAGE}%";
