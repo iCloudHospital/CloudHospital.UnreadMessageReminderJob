@@ -10,7 +10,6 @@ public abstract class FunctionBase
     public FunctionBase(IOptionsMonitor<DebugConfiguration> debugConfigurationAccessor)
     {
         _debugConfiguration = debugConfigurationAccessor.CurrentValue ?? new();
-
     }
 
     protected DebugConfiguration DebugConfiguration { get => _debugConfiguration; }

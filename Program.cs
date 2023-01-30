@@ -71,12 +71,20 @@ var host = new HostBuilder()
             .Configure(options =>
             {
                 var isInDebug = Environment.GetEnvironmentVariable(Constants.ENV_DEBUG);
+                var bypassPayloadValidation = Environment.GetEnvironmentVariable(Constants.ENV_BypassPayloadValidation);
+
                 if (!bool.TryParse(isInDebug, out bool isInDebugValue))
                 {
                     isInDebugValue = false;
                 }
 
+                if (!bool.TryParse(bypassPayloadValidation, out bool bypassPayloadValidationValue))
+                {
+                    bypassPayloadValidationValue = false;
+                }
+
                 options.IsInDebug = isInDebugValue;
+                options.BypassPayloadValidation = bypassPayloadValidationValue;
             });
 
         services.AddOptions<SendbirdConfiguration>()

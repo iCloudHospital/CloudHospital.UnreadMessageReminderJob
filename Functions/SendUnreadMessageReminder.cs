@@ -138,7 +138,10 @@ website: {website}
 
                 if (templateData == null)
                 {
-                    _logger.LogInformation($"Not supported userType [userType={senderUserType}]");
+                    if (IsInDebug)
+                    {
+                        _logger.LogInformation($"❌ Not supported userType [userType={senderUserType}]");
+                    }
                 }
                 else
                 {
@@ -151,10 +154,24 @@ website: {website}
 
                     await _emailSender.SendEmailAsync(user.Email, user.FullName, emailTemplateId, templateData, cancellationToken);
 
-                    _logger.LogInformation("✅ Unread message reminder job completed.");
+                    // Do not leave hospital manager in the group channel, if Sender is not patient #38
+                    if (IsManagerUserType(item.Sender?.Metadata?.UserType))
+                    {
+                        // Hospital manager will leave in the channel #35
+                        await LeaveGroupChannelAsync(item, cancellationToken);
+                    }
+                    else
+                    {
+                        if (IsInDebug)
+                        {
+                            _logger.LogInformation("✅ Sender is patient. Hospital manager remains in the group channel.");
+                        }
+                    }
 
-                    // Hospital manager will leave in the channel #35
-                    await LeaveGroupChannelAsync(item, cancellationToken);
+                    if (IsInDebug)
+                    {
+                        _logger.LogInformation("✅ Unread message reminder job completed.");
+                    }
                 }
             }
         }
@@ -233,9 +250,12 @@ website: {website}
                 UserIds = managerIds,
             }, cancellationToken);
 
-            _logger.LogInformation("✅ hospital manager leaves in the group channel. channel={channelUrl};manager={managerId}",
-                item.Channel.ChannelUrl,
-                string.Join(", ", managerIds));
+            if (IsInDebug)
+            {
+                _logger.LogInformation("✅ hospital manager leaves in the group channel. channel={channelUrl};manager={managerId}",
+                    item.Channel.ChannelUrl,
+                    string.Join(", ", managerIds));
+            }
         }
         catch (Exception ex)
         {
