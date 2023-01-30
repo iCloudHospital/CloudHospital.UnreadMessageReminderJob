@@ -1,11 +1,7 @@
-using System;
-using System.Data.SqlClient;
-using System.Linq;
 using System.Text.Json;
 using CloudHospital.UnreadMessageReminderJob.Models;
 using CloudHospital.UnreadMessageReminderJob.Options;
 using CloudHospital.UnreadMessageReminderJob.Services;
-using Dapper;
 using Microsoft.Azure.Functions.Worker;
 using Microsoft.Extensions.Logging;
 using Microsoft.Extensions.Options;
@@ -15,21 +11,24 @@ namespace CloudHospital.UnreadMessageReminderJob;
 public class SendUnreadMessageReminder : FunctionBase
 {
     private readonly EmailSender _emailSender;
-    private readonly DatabaseConfiguration _databaseConfiguration;
+    private readonly DatabaseService _databaseService;
     private readonly JsonSerializerOptions _jsonSerializerOptions;
+    private readonly SendbirdService _sendbirdService;
     private readonly ILogger _logger;
 
     public SendUnreadMessageReminder(
         IOptionsMonitor<DebugConfiguration> debugConfigurationAccessor,
-        IOptionsMonitor<DatabaseConfiguration> databaseConfigurationAccessor,
         IOptionsMonitor<JsonSerializerOptions> jsonSerializerOptionsAccessor,
         EmailSender emailSender,
+        DatabaseService databaseService,
+        SendbirdService sendbirdService,
         ILoggerFactory loggerFactory)
         : base(debugConfigurationAccessor)
     {
         _emailSender = emailSender;
-        _databaseConfiguration = databaseConfigurationAccessor.CurrentValue;
+        _databaseService = databaseService;
         _jsonSerializerOptions = jsonSerializerOptionsAccessor.CurrentValue;
+        _sendbirdService = sendbirdService;
         _logger = loggerFactory.CreateLogger<SendUnreadMessageReminder>();
     }
 
@@ -38,6 +37,9 @@ public class SendUnreadMessageReminder : FunctionBase
         [QueueTrigger(Constants.UNREAD_MESSAGE_REMINDER_QUEUE_NAME, Connection = Constants.AZURE_STORAGE_ACCOUNT_CONNECTION)]
             SendBirdGroupChannelMessageSendEventModel item)
     {
+        CancellationTokenSource cancellationTokenSource = new(TimeSpan.FromSeconds(10));
+        var cancellationToken = cancellationTokenSource.Token;
+
         var logMessage = string.Empty;
         _logger.LogInformation($"⚡️ Dequeue item: {nameof(SendBirdGroupChannelMessageSendEventModel.Channel.ChannelUrl)}={item.Channel.ChannelUrl} {nameof(SendBirdGroupChannelMessageSendEventModel.Payload.MessageId)}={item.Payload.MessageId}");
 
@@ -93,8 +95,8 @@ public class SendUnreadMessageReminder : FunctionBase
                 _logger.LogInformation("🔨 userId={userId}, hospitalId={hospitalId}, userTypeForTemplate={userType}", userId, hospitalId, userTypeForTemplate);
             }
 
-            var user = await GetUser(userId);
-            var hospital = await GetHospitalAsync(hospitalId);
+            var user = await _databaseService.GetUser(userId);
+            var hospital = await _databaseService.GetHospitalAsync(hospitalId);
 
             if (user == null)
             {
@@ -136,7 +138,10 @@ website: {website}
 
                 if (templateData == null)
                 {
-                    _logger.LogInformation($"Not supported userType [userType={senderUserType}]");
+                    if (IsInDebug)
+                    {
+                        _logger.LogInformation($"❌ Not supported userType [userType={senderUserType}]");
+                    }
                 }
                 else
                 {
@@ -147,95 +152,28 @@ website: {website}
 ", JsonSerializer.Serialize(templateData, _jsonSerializerOptions));
                     }
 
-                    await _emailSender.SendEmailAsync(user.Email, user.FullName, emailTemplateId, templateData);
+                    await _emailSender.SendEmailAsync(user.Email, user.FullName, emailTemplateId, templateData, cancellationToken);
 
-                    _logger.LogInformation("✅ Unread message reminder job completed.");
-                }
-            }
-        }
-    }
-
-    private async Task<UserModel?> GetUser(string? id)
-    {
-        if (string.IsNullOrWhiteSpace(id))
-        {
-            _logger.LogWarning("User id is empty.");
-
-            return null;
-        }
-
-        using (var connection = new SqlConnection(_databaseConfiguration.ConnectionString))
-        {
-            try
-            {
-                await connection.OpenAsync();
-                var query = @"
-SELECT
-    top 1
-    Id,
-    FirstName,
-    LastName,
-    Email
-FROM
-    Users U 
-INNER JOIN
-    UserAuditableEntities A 
-ON
-    U.Id = A.UserId    
-WHERE
-    U.Id = @Id 
-AND A.IsDeleted = 0
-                ";
-
-                var users = await connection.QueryAsync<UserModel>(query, new { Id = id });
-
-                if (users != null && users.Any())
-                {
-                    var foundUser = users.FirstOrDefault();
-                    if (foundUser != null)
+                    // Do not leave hospital manager in the group channel, if Sender is not patient #38
+                    if (IsManagerUserType(item.Sender?.Metadata?.UserType))
                     {
-                        return foundUser;
+                        // Hospital manager will leave in the channel #35
+                        await LeaveGroupChannelAsync(item, cancellationToken);
+                    }
+                    else
+                    {
+                        if (IsInDebug)
+                        {
+                            _logger.LogInformation("✅ Sender is patient. Hospital manager remains in the group channel.");
+                        }
+                    }
+
+                    if (IsInDebug)
+                    {
+                        _logger.LogInformation("✅ Unread message reminder job completed.");
                     }
                 }
             }
-            finally
-            {
-                await connection.CloseAsync();
-            }
-        }
-
-        return null;
-    }
-
-    private async Task<HospitalModel?> GetHospitalAsync(string hospitalId)
-    {
-        using (var connection = new SqlConnection(_databaseConfiguration.ConnectionString))
-        {
-            var query = @"
-SELECT 
-    h.Id,
-    h.Logo,
-    h.WebsiteUrl,
-    t.Name
-FROM 
-    Hospitals h 
-INNER JOIN 
-    HospitalAuditableEntities auditable
-ON
-    h.Id = auditable.HospitalId
-INNER JOIN 
-    HospitalTranslations t 
-ON
-    h.Id = t.HospitalId
-and t.LanguageCode = 'en'
-where 
-    auditable.IsDeleted = 0
-AND h.Id = @HospitalId 
-            ";
-
-            var hospitals = await connection.QueryAsync<HospitalModel>(query, new { HospitalId = hospitalId });
-
-            return hospitals.FirstOrDefault();
         }
     }
 
@@ -245,7 +183,6 @@ AND h.Id = @HospitalId
         SendBirdSenderUserTypes.Manager => GetManagerTemplateData(user, item, hospital, message, targetPage),
         _ => null,
     };
-
 
     /// <summary>
     /// ChManager
@@ -297,6 +234,56 @@ AND h.Id = @HospitalId
         };
 
         return templateData;
+    }
+
+    private async Task LeaveGroupChannelAsync(SendBirdGroupChannelMessageSendEventModel item, CancellationToken cancellationToken = default)
+    {
+        var managerIds = item.Members
+            .Where(member => IsManagerUserType(member.Metadata?.UserType))
+            .Select(member => member.UserId)
+            .ToArray();
+
+        try
+        {
+            await _sendbirdService.LeaveGroupChannelV3Async(item.Channel.ChannelUrl, new LeaveMembersGroupChannelModel
+            {
+                UserIds = managerIds,
+            }, cancellationToken);
+
+            if (IsInDebug)
+            {
+                _logger.LogInformation("✅ hospital manager leaves in the group channel. channel={channelUrl};manager={managerId}",
+                    item.Channel.ChannelUrl,
+                    string.Join(", ", managerIds));
+            }
+        }
+        catch (Exception ex)
+        {
+            _logger.LogWarning(ex, "❌ Fail to leave manager to group channel. channel={channelUrl};manager={managerId};message={message}",
+                item.Channel.ChannelUrl,
+                string.Join(", ", managerIds),
+                ex.Message);
+        }
+    }
+
+    private bool IsManagerUserType(string? userType)
+    {
+        if (string.IsNullOrWhiteSpace(userType))
+        {
+            return false;
+        }
+
+        if (userType.Equals(SendBirdSenderUserTypes.ChManager, StringComparison.OrdinalIgnoreCase))
+        {
+            return true;
+        }
+
+        if (userType.Equals(SendBirdSenderUserTypes.Manager, StringComparison.OrdinalIgnoreCase))
+        {
+            return true;
+        }
+
+        return false;
     }
 }
 

@@ -71,16 +71,59 @@ var host = new HostBuilder()
             .Configure(options =>
             {
                 var isInDebug = Environment.GetEnvironmentVariable(Constants.ENV_DEBUG);
+                var bypassPayloadValidation = Environment.GetEnvironmentVariable(Constants.ENV_BypassPayloadValidation);
+
                 if (!bool.TryParse(isInDebug, out bool isInDebugValue))
                 {
                     isInDebugValue = false;
                 }
 
+                if (!bool.TryParse(bypassPayloadValidation, out bool bypassPayloadValidationValue))
+                {
+                    bypassPayloadValidationValue = false;
+                }
+
                 options.IsInDebug = isInDebugValue;
+                options.BypassPayloadValidation = bypassPayloadValidationValue;
+            });
+
+        services.AddOptions<SendbirdConfiguration>()
+            .Configure(options =>
+            {
+                var sendbirdApiKey = Environment.GetEnvironmentVariable(Constants.ENV_SENDBIRD_API_KEY);
+                var sendbirdAppId = Environment.GetEnvironmentVariable(Constants.ENV_SENDBIRD_APP_ID);
+
+                if (string.IsNullOrWhiteSpace(sendbirdApiKey))
+                {
+                    throw new ArgumentException("Sendbird api key does not configure. Please check application settings.");
+                }
+
+                if (string.IsNullOrWhiteSpace(sendbirdAppId))
+                {
+                    throw new ArgumentException("Sendbird app id does not configure. Please check application settings.");
+                }
+
+                options.ApiKey = sendbirdApiKey;
+                options.AppId = sendbirdAppId;
+            });
+
+        services.AddOptions<AccountConfiguration>()
+            .Configure(options =>
+            {
+                var helpUserId = Environment.GetEnvironmentVariable(Constants.ENV_HELP_USER_ID);
+
+                if (string.IsNullOrWhiteSpace(helpUserId))
+                {
+                    throw new ArgumentException("Help user id does not configure. Please check application settings.");
+                }
+
+                options.HelpUserId = helpUserId;
             });
 
         services.AddTransient<EmailSender>();
         services.AddTransient<NotificationService>();
+        services.AddTransient<SendbirdService>();
+        services.AddTransient<DatabaseService>();
     })
     .Build();
 

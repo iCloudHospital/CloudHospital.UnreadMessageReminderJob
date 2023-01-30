@@ -1,14 +1,15 @@
-﻿using System.IO;
-using System.Net;
+﻿using System.Net;
 using System.Security.Cryptography;
 using System.Text;
 using System.Text.Json;
+using System.Linq;
 using CloudHospital.UnreadMessageReminderJob.Models;
 using CloudHospital.UnreadMessageReminderJob.Options;
 using Microsoft.Azure.Functions.Worker;
 using Microsoft.Azure.Functions.Worker.Http;
 using Microsoft.Extensions.Logging;
 using Microsoft.Extensions.Options;
+using CloudHospital.UnreadMessageReminderJob.Services;
 
 namespace CloudHospital.UnreadMessageReminderJob;
 
@@ -19,14 +20,25 @@ public class GroupChannelMessageWebHook : HttpTriggerFunctionBase
 {
     private readonly ILogger _logger;
     private readonly JsonSerializerOptions _jsonSerializerOptions;
+    private readonly AccountConfiguration _accountConfiguration;
+    private readonly SendbirdService _sendbirdService;
+    private readonly DatabaseService _databaseService;
 
     public GroupChannelMessageWebHook(
         IOptionsMonitor<DebugConfiguration> debugConfigurationAccessor,
         IOptionsMonitor<JsonSerializerOptions> jsonSerializerOptionsAccessor,
+        IOptionsMonitor<AccountConfiguration> accountConfigurationAccess,
+        SendbirdService sendbirdService,
+        DatabaseService databaseService,
         ILoggerFactory loggerFactory)
         : base(debugConfigurationAccessor)
     {
         _jsonSerializerOptions = jsonSerializerOptionsAccessor.CurrentValue;
+        _accountConfiguration = accountConfigurationAccess.CurrentValue;
+
+        _sendbirdService = sendbirdService;
+        _databaseService = databaseService;
+
         _logger = loggerFactory.CreateLogger<GroupChannelMessageWebHook>();
     }
 
@@ -37,7 +49,7 @@ public class GroupChannelMessageWebHook : HttpTriggerFunctionBase
     {
         _logger.LogInformation($"⚡️ [{nameof(GroupChannelMessageWebHook)}] HTTP trigger function processed a request.");
 
-        SendBirdGroupChannelEventModel model = null;
+        SendBirdGroupChannelEventModel? model = null;
 
         var response = CreateResponse(req, HttpStatusCode.OK);
 
@@ -49,7 +61,7 @@ public class GroupChannelMessageWebHook : HttpTriggerFunctionBase
             return CreateResponse(req, HttpStatusCode.BadRequest);
         }
 
-        byte[] payloadBinary = null;
+        byte[]? payloadBinary = null;
         using (var memoryStream = new MemoryStream())
         {
             req.Body.Position = 0;
@@ -80,6 +92,9 @@ public class GroupChannelMessageWebHook : HttpTriggerFunctionBase
         try
         {
             var verifiedRequest = VerifySendBirdSignature(req, payloadBinary, IsInDebug);
+#if DEBUG
+            verifiedRequest = DebugConfiguration.BypassPayloadValidation || verifiedRequest;
+#endif
 
             if (!verifiedRequest)
             {
@@ -112,7 +127,6 @@ public class GroupChannelMessageWebHook : HttpTriggerFunctionBase
         if (model.Category == SendBirdGroupChannelEventCategories.MessageRead)
         {
             return await ProcessGroupChannelMessageRead(req, payload);
-
         }
         else if (model.Category == SendBirdGroupChannelEventCategories.MessageSend)
         {
@@ -130,7 +144,7 @@ public class GroupChannelMessageWebHook : HttpTriggerFunctionBase
     {
         _logger.LogInformation($"⚡️ [group_channel:message_read] HTTP trigger function processed a request.");
 
-        SendBirdGroupChannelMessageReadEventModel model = null;
+        SendBirdGroupChannelMessageReadEventModel? model = null;
 
         var response = CreateResponse(req, HttpStatusCode.OK);
 
@@ -211,7 +225,7 @@ public class GroupChannelMessageWebHook : HttpTriggerFunctionBase
     {
         _logger.LogInformation($"⚡️ [group_channel:message_send] HTTP trigger function processed a request.");
 
-        SendBirdGroupChannelMessageSendEventModel model = null;
+        SendBirdGroupChannelMessageSendEventModel? model = null;
 
         var response = CreateResponse(req, HttpStatusCode.OK);
 
@@ -391,6 +405,33 @@ Hashed value: {hashedString}
         }
 
         return model.ReadUpdates.Any(x => x.UserId != senderUserId);
+    }
+
+    private bool IsSaasClient(HospitalModel? hospital)
+    {
+        if (hospital == null)
+        {
+            return false;
+        }
+
+        var ich = new string[] {
+            "https://icloudhospital.com",
+            "https://int.icloudhospital.com"
+        };
+
+        var hospitalWebSiteUrl = hospital.WebsiteUrl?.ToLower().Trim();
+
+        if (string.IsNullOrWhiteSpace(hospitalWebSiteUrl))
+        {
+            return false;
+        }
+
+        if (ich.Contains(hospitalWebSiteUrl))
+        {
+            return false;
+        }
+
+        return true;
     }
 }
 

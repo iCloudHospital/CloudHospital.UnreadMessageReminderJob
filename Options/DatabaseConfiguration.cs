@@ -2,5 +2,5 @@ namespace CloudHospital.UnreadMessageReminderJob.Options;
 
 public class DatabaseConfiguration
 {
-    public string ConnectionString { get; set; }
+    public string ConnectionString { get; set; } = string.Empty;
 }

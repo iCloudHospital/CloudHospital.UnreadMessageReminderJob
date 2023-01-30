@@ -72,7 +72,7 @@ Calling reminder minutes : {callingReminderBasisValue} MIN
             {
                 if (!string.IsNullOrWhiteSpace(item.Json))
                 {
-                    var consultation = JsonSerializer.Deserialize<ConsultationModel>(item.Json, _jsonSerializerOptions);
+                    var consultation = JsonSerializer.Deserialize<Models.ConsultationModel>(item.Json, _jsonSerializerOptions);
                     if (consultation != null)
                     {
                         // enqueue
@@ -119,5 +119,5 @@ Calling reminder minutes : {callingReminderBasisValue} MIN
 public class CallingReminderQueueResponse
 {
     [QueueOutput(Constants.CALLING_REMINDER_QUEUE_NAME, Connection = Constants.AZURE_STORAGE_ACCOUNT_CONNECTION)]
-    public List<ConsultationModel> Items { get; set; } = new();
+    public List<Models.ConsultationModel> Items { get; set; } = new();
 }
