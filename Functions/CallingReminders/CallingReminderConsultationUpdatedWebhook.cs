@@ -11,6 +11,9 @@ namespace CloudHospital.UnreadMessageReminderJob;
 
 public class CallingReminderConsultationUpdatedWebhook : HttpTriggerFunctionBase
 {
+    private readonly ILogger _logger;
+    private readonly JsonSerializerOptions _jsonSerializerOptions;
+
     public CallingReminderConsultationUpdatedWebhook(
         IOptionsMonitor<DebugConfiguration> debugConfigurationAccessor,
         IOptionsMonitor<JsonSerializerOptions> jsonSerializerOptionsAccessor,
@@ -138,7 +141,5 @@ Unread delayed minutes : {callingReminderBasisValue} MIN
         return response;
     }
 
-    private readonly ILogger _logger;
-    private readonly JsonSerializerOptions _jsonSerializerOptions;
 }
 

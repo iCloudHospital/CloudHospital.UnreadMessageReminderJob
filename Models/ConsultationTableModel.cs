@@ -25,10 +25,3 @@ public class ConsultationTableModel : ITableEntity
 
     public ETag ETag { get; set; }
 }
-
-public enum ConsultationType : byte
-{
-    Hospital,
-    Doctor,
-    Deal
-}

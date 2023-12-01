@@ -15,14 +15,3 @@ public class ConsultationModel
 
     public bool IsOpen { get; set; }
 }
-
-public enum ConsultationStatus : byte
-{
-    New,
-    Rejected,
-    Approved,
-    Paid,
-    Canceled,
-    RefundRequested,
-    Refunded,
-}

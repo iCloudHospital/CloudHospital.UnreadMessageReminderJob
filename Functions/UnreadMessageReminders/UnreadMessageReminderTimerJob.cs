@@ -32,7 +32,7 @@ public class UnreadMessageReminderTimerJob : FunctionBase
         _logger.LogInformation($"⚡️ {nameof(UnreadMessageReminderTimerJob)} Timer trigger function executed at: {DateTime.UtcNow:yyyy-MM-ddTHH:mm:ssZ}");
 
         var unreadDelayMinutes = Environment.GetEnvironmentVariable(Constants.ENV_UNREAD_DELAY_MINUTES);
-        // int unreadDelayMinutesValue = 0;
+
         if (!int.TryParse(unreadDelayMinutes, out int unreadDelayMinutesValue))
         {
             unreadDelayMinutesValue = 5;
@@ -113,29 +113,4 @@ Unread delayed minutes : {unreadDelayMinutesValue} MIN
 
         return response;
     }
-}
-
-/// <summary>
-/// Queue output binding wrapper
-/// </summary>
-public class UnreadMessageReminderQueueResponse
-{
-    [QueueOutput(Constants.UNREAD_MESSAGE_REMINDER_QUEUE_NAME, Connection = Constants.AZURE_STORAGE_ACCOUNT_CONNECTION)]
-    public List<SendBirdGroupChannelMessageSendEventModel> Items { get; set; } = new();
-}
-
-public class MyInfo
-{
-    public MyScheduleStatus ScheduleStatus { get; set; }
-
-    public bool IsPastDue { get; set; }
-}
-
-public class MyScheduleStatus
-{
-    public DateTime Last { get; set; }
-
-    public DateTime Next { get; set; }
-
-    public DateTime LastUpdated { get; set; }
 }

@@ -1,6 +1,4 @@
 using System.Text.Json.Serialization;
-using System.Collections.Generic;
-using System.Linq;
 using CloudHospital.UnreadMessageReminderJob.Converters;
 
 namespace CloudHospital.UnreadMessageReminderJob.Models;

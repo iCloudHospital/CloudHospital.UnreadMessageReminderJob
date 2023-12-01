@@ -9,7 +9,6 @@ namespace CloudHospital.UnreadMessageReminderJob;
 
 public class SendCallingReminder : FunctionBase
 {
-
     private readonly NotificationService _notificationService;
     private readonly DatabaseService _databaseService;
     private readonly ILogger _logger;

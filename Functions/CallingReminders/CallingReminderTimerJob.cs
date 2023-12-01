@@ -9,6 +9,10 @@ namespace CloudHospital.UnreadMessageReminderJob;
 
 public class CallingReminderTimerJob : FunctionBase
 {
+
+    private readonly JsonSerializerOptions _jsonSerializerOptions;
+    private readonly ILogger _logger;
+
     public CallingReminderTimerJob(
         IOptionsMonitor<DebugConfiguration> debugConfigurationAccessor,
         IOptionsMonitor<JsonSerializerOptions> jsonSerializerOptionsAccessor,
@@ -108,16 +112,4 @@ Calling reminder minutes : {callingReminderBasisValue} MIN
 
         return response;
     }
-
-    private readonly JsonSerializerOptions _jsonSerializerOptions;
-    private readonly ILogger _logger;
-}
-
-/// <summary>
-/// Queue output binding wrapper
-/// </summary>
-public class CallingReminderQueueResponse
-{
-    [QueueOutput(Constants.CALLING_REMINDER_QUEUE_NAME, Connection = Constants.AZURE_STORAGE_ACCOUNT_CONNECTION)]
-    public List<Models.ConsultationModel> Items { get; set; } = new();
 }
