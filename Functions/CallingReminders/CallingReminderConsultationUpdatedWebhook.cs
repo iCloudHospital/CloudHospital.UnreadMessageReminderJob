@@ -1,3 +1,24 @@
+/*
+Webhook for consultation 
+
+Request this endpoint when consultation entry is updated.
+
+POST: /api/CallingReminderConsultationUpdatedWebHook
+
+```json
+{
+    "id": "48c4f807-08e8-4a2f-926b-34e792e4a790", 
+    "patientId": "7c58e84b-2143-4526-a854-b66768c7f143",
+    "confirmedDateStart": "2023-12-01T09:00:00",
+    "consultationType": 0,
+    "hospitalId": "663c4162-4cc7-4fc5-a772-4aed0ed39035",
+    "hospitalName": "Test Hospital",
+    "hospitalWebsiteUrl":"https://test-hospital.icloudhospital.com",
+    "isOpen": true
+}
+```
+*/
+
 using System.Net;
 using System.Text.Json;
 using CloudHospital.UnreadMessageReminderJob.Models;
@@ -119,14 +140,14 @@ Unread delayed minutes : {callingReminderBasisValue} MIN
             }
         }
 
-        if (consultation.IsOpen)
+        if (consultation.IsOpen && consultation.ConfirmedDateStart.HasValue)
         {
             // If consultation is opened state, Add entry.
             var entry = new ConsultationTableModel
             {
                 PartitionKey = consultation.Id,
                 RowKey = Guid.NewGuid().ToString(),
-                ConfirmedDateStart = consultation.ConfirmedDateStart,
+                ConfirmedDateStart = consultation.ConfirmedDateStart.Value,
                 Json = payload,
             };
 
